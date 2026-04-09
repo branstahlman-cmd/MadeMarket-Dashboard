@@ -1,0 +1,1074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3PG Advisors — Deal Pipeline Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --navy:    #0F1E35;
+  --navy2:   #1B2A4A;
+  --navy3:   #243659;
+  --blue:    #0A7EC2;
+  --blue2:   #1A9FE8;
+  --lime:    #8DC63F;
+  --lime2:   #A8D85A;
+  --white:   #FFFFFF;
+  --off:     #F4F6FA;
+  --off2:    #E8EDF5;
+  --border:  #D0DAEC;
+  --text:    #0F1E35;
+  --muted:   #5A7099;
+  --muted2:  #8FA5C5;
+  --red:     #C0392B;
+  --red-bg:  #FDECEA;
+  --amber:   #D68910;
+  --amb-bg:  #FEF9E7;
+  --green:   #1E8449;
+  --grn-bg:  #E9F7EF;
+  --sidebar: 220px;
+  --topbar:  56px;
+  --radius:  8px;
+  --shadow:  0 1px 3px rgba(15,30,53,0.08), 0 4px 16px rgba(15,30,53,0.06);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; font-family: 'DM Sans', sans-serif; background: var(--off); color: var(--text); font-size: 13px; }
+
+/* LAYOUT */
+.shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* SIDEBAR */
+.sidebar {
+  width: var(--sidebar);
+  background: var(--navy);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 10;
+}
+.sidebar-logo {
+  padding: 20px 18px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.sidebar-logo .firm { color: var(--white); font-size: 11px; font-weight: 500; letter-spacing: 0.8px; text-transform: uppercase; opacity: 0.5; margin-bottom: 2px; }
+.sidebar-logo .title { color: var(--white); font-size: 14px; font-weight: 600; letter-spacing: -0.2px; }
+.sidebar-logo .subtitle { color: var(--blue2); font-size: 10px; font-weight: 400; margin-top: 1px; opacity: 0.8; }
+
+.nav-section { padding: 12px 0 4px; }
+.nav-label { color: rgba(255,255,255,0.3); font-size: 9px; font-weight: 600; letter-spacing: 1.2px; text-transform: uppercase; padding: 0 18px 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 18px; cursor: pointer;
+  color: rgba(255,255,255,0.55); font-size: 12px; font-weight: 400;
+  transition: all 0.15s; border-left: 2px solid transparent;
+  position: relative;
+}
+.nav-item:hover { color: var(--white); background: rgba(255,255,255,0.05); }
+.nav-item.active { color: var(--white); background: rgba(10,126,194,0.18); border-left-color: var(--blue2); font-weight: 500; }
+.nav-item .icon { width: 16px; height: 16px; opacity: 0.7; flex-shrink: 0; }
+.nav-item.active .icon { opacity: 1; }
+.nav-badge { margin-left: auto; background: var(--red); color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 10px; }
+.nav-badge.green { background: var(--green); }
+
+.sidebar-footer {
+  margin-top: auto;
+  padding: 16px 18px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.sidebar-logo-img { width: 80px; opacity: 0.85; }
+.refresh-info { color: rgba(255,255,255,0.3); font-size: 9px; font-family: 'DM Mono', monospace; }
+
+/* MAIN */
+.main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+/* TOPBAR */
+.topbar {
+  height: var(--topbar);
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 24px; gap: 16px;
+  flex-shrink: 0;
+}
+.topbar-title { font-size: 16px; font-weight: 600; color: var(--navy); letter-spacing: -0.3px; }
+.topbar-sub { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.topbar-date { margin-left: auto; font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; background: var(--off); padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border); }
+
+/* FILTER BAR */
+.filterbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 24px;
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0; flex-wrap: wrap;
+}
+.filter-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; margin-right: 4px; }
+.filter-select {
+  height: 30px; padding: 0 28px 0 10px; border: 1px solid var(--border);
+  border-radius: 6px; background: var(--off); color: var(--text);
+  font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500;
+  cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235A7099' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 9px center;
+  min-width: 130px; transition: border-color 0.15s;
+}
+.filter-select:focus { outline: none; border-color: var(--blue); }
+.filter-reset { margin-left: auto; height: 30px; padding: 0 14px; border: 1px solid var(--border); border-radius: 6px; background: transparent; color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.filter-reset:hover { border-color: var(--blue); color: var(--blue); }
+.filter-count { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; white-space: nowrap; }
+
+/* CONTENT */
+.content { flex: 1; overflow-y: auto; padding: 20px 24px 32px; }
+.page { display: none; }
+.page.active { display: block; }
+
+/* CARDS */
+.kpi-row { display: grid; gap: 14px; margin-bottom: 20px; }
+.kpi-6 { grid-template-columns: repeat(6,1fr); }
+.kpi-4 { grid-template-columns: repeat(4,1fr); }
+.kpi-3 { grid-template-columns: repeat(3,1fr); }
+.kpi-card {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+  border-top: 3px solid var(--border);
+  box-shadow: var(--shadow); position: relative; overflow: hidden;
+}
+.kpi-card::after { content: ''; position: absolute; top: 0; right: 0; width: 60px; height: 60px; border-radius: 0 0 0 100%; opacity: 0.04; }
+.kpi-card.blue { border-top-color: var(--blue); } .kpi-card.blue::after { background: var(--blue); }
+.kpi-card.green { border-top-color: var(--green); } .kpi-card.green::after { background: var(--green); }
+.kpi-card.amber { border-top-color: var(--amber); } .kpi-card.amber::after { background: var(--amber); }
+.kpi-card.red { border-top-color: var(--red); } .kpi-card.red::after { background: var(--red); }
+.kpi-card.lime { border-top-color: var(--lime); } .kpi-card.lime::after { background: var(--lime); }
+.kpi-card.navy { border-top-color: var(--navy2); } .kpi-card.navy::after { background: var(--navy2); }
+.kpi-val { font-size: 26px; font-weight: 600; color: var(--navy); letter-spacing: -0.8px; line-height: 1; margin-bottom: 4px; font-family: 'DM Mono', monospace; }
+.kpi-val.red { color: var(--red); }
+.kpi-val.green { color: var(--green); }
+.kpi-val.amber { color: var(--amber); }
+.kpi-val.muted { color: var(--muted); font-size: 14px; font-weight: 500; }
+.kpi-label { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.kpi-sub { font-size: 10px; color: var(--muted2); margin-top: 3px; }
+
+/* PANELS */
+.row { display: grid; gap: 14px; margin-bottom: 14px; }
+.row-2 { grid-template-columns: 1fr 1fr; }
+.row-3-2 { grid-template-columns: 3fr 2fr; }
+.row-2-1 { grid-template-columns: 2fr 1fr; }
+.row-3 { grid-template-columns: 1fr 1fr 1fr; }
+.panel {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px 20px;
+  box-shadow: var(--shadow);
+}
+.panel-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.panel-title { font-size: 11px; font-weight: 600; color: var(--navy); text-transform: uppercase; letter-spacing: 0.6px; }
+.panel-meta { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; }
+.panel-gap { background: #FFFBF0; border: 1px solid #F0D060; border-radius: 6px; padding: 8px 12px; margin-bottom: 14px; font-size: 10px; color: #7A5C00; display: flex; gap: 8px; align-items: flex-start; }
+.panel-gap strong { color: #5A3A00; }
+
+/* TABLES */
+.tbl-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 11px; }
+thead th { background: var(--navy); color: var(--white); padding: 7px 10px; text-align: left; font-size: 9.5px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase; white-space: nowrap; }
+thead th:first-child { border-radius: 4px 0 0 0; }
+thead th:last-child { border-radius: 0 4px 0 0; }
+tbody tr { border-bottom: 1px solid var(--off2); transition: background 0.1s; }
+tbody tr:hover { background: var(--off); }
+tbody tr:last-child { border-bottom: none; }
+tbody td { padding: 7px 10px; color: var(--text); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+tbody td.wrap { white-space: normal; max-width: 260px; }
+tfoot td { padding: 7px 10px; background: var(--navy2); color: var(--white); font-weight: 600; font-size: 10px; }
+
+/* BADGES */
+.badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 9.5px; font-weight: 600; letter-spacing: 0.2px; white-space: nowrap; }
+.b-stale { background: var(--red-bg); color: var(--red); }
+.b-review { background: var(--amb-bg); color: var(--amber); }
+.b-current { background: var(--grn-bg); color: var(--green); }
+.b-active { background: #E8F0FB; color: var(--navy2); }
+.b-closed { background: var(--grn-bg); color: var(--green); }
+.b-na { background: var(--off2); color: var(--muted); }
+
+/* HBARS */
+.hbar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.hbar-label { font-size: 10px; color: var(--text); width: 160px; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hbar-label.sm { width: 110px; }
+.hbar-track { flex: 1; height: 8px; background: var(--off2); border-radius: 4px; overflow: hidden; }
+.hbar-fill { height: 8px; border-radius: 4px; transition: width 0.6s cubic-bezier(0.4,0,0.2,1); }
+.hbar-val { font-size: 10px; color: var(--muted); font-family: 'DM Mono', monospace; width: 72px; text-align: right; flex-shrink: 0; }
+
+/* PROB BAR */
+.prob-bar { height: 4px; background: var(--off2); border-radius: 2px; overflow: hidden; margin-top: 2px; }
+.prob-fill { height: 4px; background: var(--blue); border-radius: 2px; }
+
+/* CHART WRAP */
+.chart-wrap { position: relative; }
+
+/* STATE MAP BARS */
+.state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+
+/* ALERT BOX */
+.alert-box { border-radius: 6px; padding: 10px 14px; margin-bottom: 16px; display: flex; gap: 10px; font-size: 11px; }
+.alert-box.warn { background: #FFFBF0; border: 1px solid #F0D060; color: #7A5C00; }
+.alert-box.warn strong { color: #5A3A00; }
+
+/* DIVIDER */
+.divider { border: none; border-top: 1px solid var(--off2); margin: 14px 0; }
+
+/* SCROLLBAR */
+.content::-webkit-scrollbar { width: 5px; }
+.content::-webkit-scrollbar-track { background: transparent; }
+.content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+/* ANIMATION */
+@keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.page.active .kpi-card { animation: fadeUp 0.3s ease both; }
+.page.active .kpi-card:nth-child(2) { animation-delay: 0.04s; }
+.page.active .kpi-card:nth-child(3) { animation-delay: 0.08s; }
+.page.active .kpi-card:nth-child(4) { animation-delay: 0.12s; }
+.page.active .kpi-card:nth-child(5) { animation-delay: 0.16s; }
+.page.active .kpi-card:nth-child(6) { animation-delay: 0.20s; }
+.page.active .panel { animation: fadeUp 0.35s ease both; animation-delay: 0.1s; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="firm">3PG Advisors</div>
+    <div class="title">Deal Pipeline</div>
+    <div class="subtitle">Internal Dashboard · Confidential</div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active" onclick="showPage('summary',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+      Executive Summary
+    </div>
+    <div class="nav-item" onclick="showPage('roster',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+      Active Roster
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Financials</div>
+    <div class="nav-item" onclick="showPage('projected',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 12l4-4 3 3 5-6"/></svg>
+      Projected Fees
+    </div>
+    <div class="nav-item" onclick="showPage('actual',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+      Actual Fees
+    </div>
+    <div class="nav-item" onclick="showPage('ebitda',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="8" width="3" height="6" rx="1"/><rect x="6.5" y="5" width="3" height="9" rx="1"/><rect x="11" y="2" width="3" height="12" rx="1"/></svg>
+      Revenue & EBITDA
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-label">Intelligence</div>
+    <div class="nav-item" onclick="showPage('map',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2a4 4 0 0 1 4 4c0 3-4 8-4 8S4 9 4 6a4 4 0 0 1 4-4z"/><circle cx="8" cy="6" r="1.5"/></svg>
+      Deal Map
+    </div>
+    <div class="nav-item" onclick="showPage('leads',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="5" r="3"/><path d="M1 14c0-3 2-5 5-5"/><circle cx="12" cy="8" r="2.5"/><path d="M9.5 14c0-2 1-3.5 2.5-3.5s2.5 1.5 2.5 3.5"/></svg>
+      Deal Leads
+    </div>
+    <div class="nav-item" onclick="showPage('weekly',this)">
+      <svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 3v5l3 3"/><circle cx="8" cy="8" r="6"/></svg>
+      Weekly Review
+      <span class="nav-badge" id="stale-badge">0</span>
+    </div>
+  </div>
+
+  <div class="sidebar-footer">
+    <img src="data:image/png;base64,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" alt="3PG Advisors" class="sidebar-logo-img">
+    <div class="refresh-info" id="refresh-info">Loaded: —</div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>
+      <div class="topbar-title" id="page-title">Executive Summary</div>
+      <div class="topbar-sub" id="page-sub">Pipeline overview — all active and closed deals</div>
+    </div>
+    <div class="topbar-date" id="topbar-date">—</div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="filterbar">
+    <span class="filter-label">Filters</span>
+    <select class="filter-select" id="f-status" onchange="applyFilters()">
+      <option value="">All Statuses</option>
+      <option value="Active">Active</option>
+      <option value="Closed">Closed</option>
+    </select>
+    <select class="filter-select" id="f-owner" onchange="applyFilters()">
+      <option value="">All Owners</option>
+    </select>
+    <select class="filter-select" id="f-stage" onchange="applyFilters()">
+      <option value="">All Stages</option>
+    </select>
+    <select class="filter-select" id="f-type" onchange="applyFilters()">
+      <option value="">All Engagement Types</option>
+    </select>
+    <select class="filter-select" id="f-state" onchange="applyFilters()">
+      <option value="">All States</option>
+    </select>
+    <select class="filter-select" id="f-dl" onchange="applyFilters()">
+      <option value="">All Deal Leads</option>
+    </select>
+    <select class="filter-select" id="f-al" onchange="applyFilters()">
+      <option value="">All Acctg Leads</option>
+    </select>
+    <button class="filter-reset" onclick="resetFilters()">✕ Reset</button>
+    <span class="filter-count" id="filter-count"></span>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- PAGE: EXECUTIVE SUMMARY -->
+    <div class="page active" id="page-summary">
+      <div class="kpi-row kpi-6" id="summary-kpis"></div>
+      <div class="row row-2">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Active Deals by Stage</span><span class="panel-meta" id="stage-meta"></span></div>
+          <div id="stage-bars"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Active Fees by Owner</span></div>
+          <div id="owner-bars"></div>
+          <hr class="divider">
+          <div class="panel-head" style="margin-top:10px"><span class="panel-title">Engagement Type Mix</span></div>
+          <div id="type-bars"></div>
+        </div>
+      </div>
+      <div class="row row-2">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Fee Summary</span><span class="panel-meta">Active vs Closed</span></div>
+          <div class="chart-wrap" style="height:180px"><canvas id="chart-fee-summary"></canvas></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Pipeline by Probability</span></div>
+          <div class="chart-wrap" style="height:180px"><canvas id="chart-prob"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: ACTIVE ROSTER -->
+    <div class="page" id="page-roster">
+      <div class="panel">
+        <div class="panel-head">
+          <span class="panel-title">Active Deal Roster</span>
+          <span class="panel-meta" id="roster-meta"></span>
+        </div>
+        <div class="tbl-wrap">
+          <table id="roster-table">
+            <thead><tr>
+              <th>Deal Name</th><th>Client Firm</th><th>Stage</th><th>Type</th>
+              <th>Owner</th><th>Deal Lead</th><th>State</th>
+              <th>Total Fees</th><th>Probability</th><th>Est. Close</th>
+              <th>Staleness</th><th>Days Stale</th>
+            </tr></thead>
+            <tbody id="roster-body"></tbody>
+            <tfoot><tr id="roster-foot"></tr></tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: PROJECTED FEES -->
+    <div class="page" id="page-projected">
+      <div class="alert-box warn" id="proj-alert"></div>
+      <div class="kpi-row kpi-4" id="proj-kpis"></div>
+      <div class="row row-2">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Projected Fees by Deal</span><span class="panel-meta">Active deals with data</span></div>
+          <div id="proj-deal-bars"></div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:14px">
+            <div class="panel-head"><span class="panel-title">By Engagement Type</span></div>
+            <div id="proj-type-bars"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">By Owner</span></div>
+            <div id="proj-owner-bars"></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><span class="panel-title" style="color:var(--red)">Active Deals Missing Projected Fee Data</span><span class="panel-meta" id="proj-missing-meta"></span></div>
+        <div class="tbl-wrap"><table id="proj-missing-table"><thead><tr><th>Deal Name</th><th>Stage</th><th>Owner</th><th>Last Updated</th></tr></thead><tbody id="proj-missing-body"></tbody></table></div>
+      </div>
+    </div>
+
+    <!-- PAGE: ACTUAL FEES -->
+    <div class="page" id="page-actual">
+      <div class="alert-box warn" id="actual-alert"></div>
+      <div class="kpi-row kpi-4" id="actual-kpis"></div>
+      <div class="row row-2">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Actual Fees Collected — Active Deals</span><span class="panel-meta">Retainers earned to date</span></div>
+          <div id="actual-deal-bars"></div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:14px">
+            <div class="panel-head"><span class="panel-title">By Owner — Active</span></div>
+            <div id="actual-owner-bars"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Top Closed Deals</span><span class="panel-meta">By total fees</span></div>
+            <div class="tbl-wrap"><table id="closed-table"><thead><tr><th>Deal Name</th><th>Owner</th><th>Close Date</th><th>Total Fees</th></tr></thead><tbody id="closed-body"></tbody></table></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: EBITDA -->
+    <div class="page" id="page-ebitda">
+      <div class="alert-box warn" id="ebitda-alert"></div>
+      <div class="kpi-row kpi-4" id="ebitda-kpis"></div>
+      <div class="row row-2">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">EBITDA & Valuation by Deal</span><span class="panel-meta" id="ebitda-tbl-meta"></span></div>
+          <div class="tbl-wrap">
+            <table id="ebitda-table"><thead><tr><th>Deal Name</th><th>Status</th><th>EBITDA</th><th>Enterprise Value</th><th>EV / EBITDA</th></tr></thead>
+            <tbody id="ebitda-body"></tbody></table>
+          </div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:14px">
+            <div class="panel-head"><span class="panel-title">EBITDA — Active Deals</span></div>
+            <div id="ebitda-bars"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">EV / EBITDA Multiples</span><span class="panel-meta">Deals with both fields</span></div>
+            <div id="multiple-bars"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: MAP -->
+    <div class="page" id="page-map">
+      <div class="alert-box warn" id="map-alert"></div>
+      <div class="kpi-row kpi-4" id="map-kpis"></div>
+      <div class="row row-2">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Deal Count by State</span><span class="panel-meta" id="map-meta"></span></div>
+          <div class="state-grid" id="state-bars"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">State Deal Summary</span></div>
+          <div class="tbl-wrap">
+            <table id="state-table"><thead><tr><th>State</th><th>Active</th><th>Closed</th><th>Total</th><th>Total Fees</th></tr></thead>
+            <tbody id="state-body"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: LEADS -->
+    <div class="page" id="page-leads">
+      <div class="alert-box warn" id="leads-alert"></div>
+      <div class="kpi-row kpi-4" id="leads-kpis"></div>
+      <div class="row row-2">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Deal Lead Rollup</span><span class="panel-meta">Active + Closed</span></div>
+          <div class="tbl-wrap">
+            <table id="dl-table"><thead><tr><th>Deal Lead</th><th>Active</th><th>Closed</th><th>Total</th><th>Active Fees</th><th>All Fees</th></tr></thead>
+            <tbody id="dl-body"></tbody><tfoot><tr id="dl-foot"></tr></tfoot></table>
+          </div>
+          <hr class="divider">
+          <div class="panel-head"><span class="panel-title">Active Deals by Deal Lead</span></div>
+          <div id="dl-bars"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Accounting Lead Rollup</span><span class="panel-meta" id="al-meta"></span></div>
+          <div class="tbl-wrap">
+            <table id="al-table"><thead><tr><th>Accounting Lead</th><th>Active</th><th>Closed</th><th>Total</th><th>Active Fees</th></tr></thead>
+            <tbody id="al-body"></tbody><tfoot><tr id="al-foot"></tr></tfoot></table>
+          </div>
+          <hr class="divider">
+          <div class="panel-head"><span class="panel-title" style="color:var(--red)">Active — No Accounting Lead</span><span class="panel-meta" id="al-unassigned-meta"></span></div>
+          <div class="tbl-wrap">
+            <table id="al-unassigned-table"><thead><tr><th>Deal Name</th><th>Stage</th><th>Owner</th><th>Total Fees</th></tr></thead>
+            <tbody id="al-unassigned-body"></tbody>
+          </table></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE: WEEKLY REVIEW -->
+    <div class="page" id="page-weekly">
+      <div class="kpi-row kpi-4" id="weekly-kpis"></div>
+      <div class="row row-2">
+        <div class="panel">
+          <div class="panel-head"><span class="panel-title">Deals Requiring Attention</span><span class="panel-meta" id="stale-meta"></span></div>
+          <div class="tbl-wrap">
+            <table id="stale-table"><thead><tr><th>Deal Name</th><th>Owner</th><th>Stage</th><th>Status</th><th>Days</th><th>Last Updated</th><th>Next Step</th></tr></thead>
+            <tbody id="stale-body"></tbody>
+          </table></div>
+        </div>
+        <div>
+          <div class="panel" style="margin-bottom:14px">
+            <div class="panel-head"><span class="panel-title">Days Without Update — Top Deals</span></div>
+            <div id="stale-bars"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><span class="panel-title">Closing Next 90 Days</span><span class="panel-meta" id="closing-meta"></span></div>
+            <div class="tbl-wrap">
+              <table id="closing-table"><thead><tr><th>Deal Name</th><th>Owner</th><th>Stage</th><th>Est. Close</th><th>Fees</th><th>Prob.</th></tr></thead>
+              <tbody id="closing-body"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+</div><!-- /shell -->
+
+<script>
+const RAW_DATA = [{"Deal ID": "29936", "Deal Name": "Project Atlas - ArborNote", "Client Firm": "ArborNote", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Target Prospecting", "Engagement Type": null, "Deal Lead": "Brandon Stahlman", "Accounting Lead": "Merrick Haigler", "State/Region (Firm)": "CA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 15000, "Total Actual Fees": 15000, "Total Fees": 30000, "Total Weighted Fees": 30000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-11-18", "Last Updated": "2026-04-06", "Next Step": null, "Team Members": "Gloria G. Palmer, Bobbi Seymour, Jeffrey Harkness, Ed Bates, Mitchell Dunn, Trey Mannion, Bill Larsen, Nick Bramblett, Lacy Brown, Benton Harkness, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25316", "Deal Name": "Project Gateway - Garden Irrigation (Wetlawn)", "Client Firm": "Garden Irrigation Company, Inc.", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Target Prospecting", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Mitchell Dunn", "Accounting Lead": "Merrick Haigler", "State/Region (Firm)": "NJ", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": 2100000, "Total Projected Fees": 1200000, "Total Actual Fees": 10000, "Total Fees": 1210000, "Total Weighted Fees": 1210000, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-09-25", "Last Updated": "2026-04-02", "Next Step": null, "Team Members": "Bobbi Seymour, Benton Harkness, Trey Mannion, Bill Larsen, Mitchell Dunn, Gloria G. Palmer, Ed Bates, Jeffrey Harkness, Nick Bramblett, Lacy Brown, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "27473", "Deal Name": "Project Parkway - Pineapple Landscaping, LLC", "Client Firm": "Pineapple Landscaping, LLC", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Target Prospecting", "Engagement Type": null, "Deal Lead": "Brandon Stahlman", "Accounting Lead": "Bill Larsen", "State/Region (Firm)": "MD", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 25000, "Total Fees": 25000, "Total Weighted Fees": 25000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": "2026-02-17", "Engagement Start Date": null, "Date Created": "2025-05-19", "Last Updated": "2026-04-07", "Next Step": null, "Team Members": "Bobbi Seymour, Jeffrey Harkness, Bill Larsen, Trey Mannion, Benton Harkness, Gloria G. Palmer, Mitchell Dunn, Nick Bramblett, Lacy Brown, Ed Bates, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "27600", "Deal Name": "Project Python - Pro-Lawns, Inc.", "Client Firm": "Pro-Lawns, Inc.", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Target Prospecting", "Engagement Type": null, "Deal Lead": "Brandon Stahlman", "Accounting Lead": "Merrick Haigler", "State/Region (Firm)": "MO", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": 1400000, "Total Projected Fees": 0, "Total Actual Fees": 20000, "Total Fees": 20000, "Total Weighted Fees": 20000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-05-30", "Last Updated": "2026-03-31", "Next Step": null, "Team Members": "Lacy Brown, Bobbi Seymour, Jeffrey Harkness, Ed Bates, Benton Harkness, Mitchell Dunn, Nick Bramblett, Trey Mannion, Gloria G. Palmer, Bill Larsen, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "28063", "Deal Name": "Project Redwood - Rutland Nurseries", "Client Firm": "Rutland Nurseries", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Target Prospecting", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Benton Harkness", "Accounting Lead": "Michael Nardella", "State/Region (Firm)": "MA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": 729693, "Total Projected Fees": 0, "Total Actual Fees": 25000, "Total Fees": 25000, "Total Weighted Fees": 25000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": "2025-07-02", "Date Created": "2025-07-02", "Last Updated": "2026-03-27", "Next Step": null, "Team Members": "Trey Mannion, Bill Larsen, Mitchell Dunn, Lacy Brown, Benton Harkness, Bobbi Seymour, Jeffrey Harkness, Ed Bates, Nick Bramblett, Gloria G. Palmer, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25328", "Deal Name": "Project Viking - Valley Green Companies", "Client Firm": "Valley Green Companies", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Target Prospecting", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Benton Harkness", "Accounting Lead": "Mitchell Dunn", "State/Region (Firm)": "MN", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 20000, "Total Fees": 20000, "Total Weighted Fees": 20000, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-12-18", "Last Updated": "2026-02-05", "Next Step": "Argonne LOI Pending", "Team Members": "Bobbi Seymour, Mitchell Dunn, Benton Harkness, Gloria G. Palmer, Jeffrey Harkness, Nick Bramblett, Lacy Brown, Ed Bates, Trey Mannion, Bill Larsen, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25305", "Deal Name": "Project Alamo - Alliance TSP", "Client Firm": "Alliance TSP", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Pre-Work", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Merrick Haigler", "State/Region (Firm)": "GA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-08-21", "Last Updated": "2026-03-31", "Next Step": null, "Team Members": "Bobbi Seymour, Bill Larsen, Mitchell Dunn, Benton Harkness, Gloria G. Palmer, Nick Bramblett, Jeffrey Harkness, Lacy Brown, Ed Bates, Trey Mannion, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "30961", "Deal Name": "Project Anchor - Ace Outdoor Services", "Client Firm": "Ace Outdoor Services", "Owner": "Bobbi Seymour, Jeffrey Harkness", "Owner_Clean": "Bobbi Seymour", "Deal Stage": "Pre-Work", "Engagement Type": null, "Deal Lead": "Mitchell Dunn", "Accounting Lead": "Seamus Lawson", "State/Region (Firm)": "MI", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 25000, "Total Fees": 25000, "Total Weighted Fees": 25000, "Probability of Close %": null, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2026-02-11", "Last Updated": "2026-02-22", "Next Step": null, "Team Members": "Bobbi Seymour, Mitchell Dunn, Nick Bramblett, Lacy Brown, Gloria G. Palmer, Benton Harkness, Trey Mannion, Bill Larsen, Jeffrey Harkness, Ed Bates, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "30274", "Deal Name": "Project Elite - Earthtones", "Client Firm": "Earthtones Companies", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Pre-Work", "Engagement Type": "Buy & Build", "Deal Lead": "Mitchell Dunn", "Accounting Lead": "Merrick Haigler", "State/Region (Firm)": "TX", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 50000, "Total Actual Fees": 0, "Total Fees": 50000, "Total Weighted Fees": 37500, "Probability of Close %": 0.5, "Estimated Close Date": "2026-12-31", "Actual Close Date": null, "Engagement Start Date": "2025-12-18", "Date Created": "2025-12-18", "Last Updated": "2026-03-31", "Next Step": null, "Team Members": "Trey Mannion, Bobbi Seymour, Ed Bates, Gloria G. Palmer, Bill Larsen, Mitchell Dunn, Jeffrey Harkness, Lacy Brown, Benton Harkness, Nick Bramblett, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "31289", "Deal Name": "Project Maple - Metro Maintenance", "Client Firm": null, "Owner": null, "Owner_Clean": null, "Deal Stage": "Pre-Work", "Engagement Type": null, "Deal Lead": "Mitchell Dunn", "Accounting Lead": "Michael Nardella", "State/Region (Firm)": null, "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 20000, "Total Fees": 20000, "Total Weighted Fees": 20000, "Probability of Close %": null, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2026-03-06", "Last Updated": "2026-03-27", "Next Step": null, "Team Members": "Benton Harkness, Ed Bates, Bobbi Seymour, Bill Larsen, Trey Mannion, Nick Bramblett, Mitchell Dunn, Lacy Brown, Jeffrey Harkness, Gloria G. Palmer, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "29478", "Deal Name": "Project Porter - Ponzani Landscaping", "Client Firm": "The Ponzani Landscaping Co.", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Pre-Work", "Engagement Type": "Sell-Side M&A", "Deal Lead": "Mitchell Dunn", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "OH", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": 1604201, "Total Projected Fees": 0, "Total Actual Fees": 25000, "Total Fees": 25000, "Total Weighted Fees": 25000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-10-15", "Last Updated": "2026-02-04", "Next Step": null, "Team Members": "Nick Bramblett, Ed Bates, Bill Larsen, Gloria G. Palmer, Mitchell Dunn, Jeffrey Harkness, Trey Mannion, Benton Harkness, Bobbi Seymour, Lacy Brown, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "31927", "Deal Name": "Project Spruce - Sesmas Tree Service", "Client Firm": "Sesmas Tree Service, LLC", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Pre-Work", "Engagement Type": null, "Deal Lead": "Benton Harkness", "Accounting Lead": "Michael Nardella", "State/Region (Firm)": "GA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": null, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2026-03-26", "Last Updated": "2026-03-26", "Next Step": null, "Team Members": "Bobbi Seymour, Benton Harkness, Trey Mannion, Nick Bramblett, Mitchell Dunn, Gloria G. Palmer, Ed Bates, Jeffrey Harkness, Lacy Brown, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "29622", "Deal Name": "Project Sunset - Seasonal Solution Landscaping", "Client Firm": "Seasonal Solution Landscaping", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Pre-Work", "Engagement Type": "Valuation Only (Phase 1)", "Deal Lead": "Benton Harkness", "Accounting Lead": "Michael Nardella", "State/Region (Firm)": "GA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": 1139183, "Total Projected Fees": 0, "Total Actual Fees": 20000, "Total Fees": 20000, "Total Weighted Fees": 20000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-10-24", "Last Updated": "2026-03-27", "Next Step": null, "Team Members": "Bobbi Seymour, Jeffrey Harkness, Trey Mannion, Nick Bramblett, Lacy Brown, Benton Harkness, Mitchell Dunn, Gloria G. Palmer, Bill Larsen, Ed Bates, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "31201", "Deal Name": "Project Younkin - Yard Solutions", "Client Firm": "Yard Solutions", "Owner": null, "Owner_Clean": null, "Deal Stage": "Pre-Work", "Engagement Type": "Sell-Side M&A", "Deal Lead": "Brandon Stahlman", "Accounting Lead": "Michael Nardella", "State/Region (Firm)": "OH", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 15000, "Total Fees": 15000, "Total Weighted Fees": 15000, "Probability of Close %": null, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": "2026-03-02", "Date Created": "2026-02-27", "Last Updated": "2026-04-02", "Next Step": null, "Team Members": "Benton Harkness, Ed Bates, Bobbi Seymour, Bill Larsen, Trey Mannion, Nick Bramblett, Mitchell Dunn, Lacy Brown, Jeffrey Harkness, Gloria G. Palmer, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25319", "Deal Name": "Project Maverick - MTScapes", "Client Firm": "MTScapes", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Value Creation - Growth Strategy", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Bill Larsen", "State/Region (Firm)": "GA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 50000000, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 0, "Total Fees": 0, "Total Weighted Fees": 0, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-05-22", "Last Updated": "2026-01-04", "Next Step": null, "Team Members": "Jeffrey Harkness, Bill Larsen, Mitchell Dunn, Gloria G. Palmer, Bobbi Seymour, Nick Bramblett, Lacy Brown, Trey Mannion, Benton Harkness, Ed Bates, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "29063", "Deal Name": "Project Palmetto - Peak Landscape, Inc.", "Client Firm": "Peak Landscape Inc", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Value Creation - Growth Strategy", "Engagement Type": "Sell-Side M&A", "Deal Lead": "Benton Harkness", "Accounting Lead": "Michael Nardella", "State/Region (Firm)": "OR", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": 1114391, "Total Projected Fees": 0, "Total Actual Fees": 35000, "Total Fees": 35000, "Total Weighted Fees": 35000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-09-18", "Last Updated": "2026-03-27", "Next Step": null, "Team Members": "Bill Larsen, Gloria G. Palmer, Trey Mannion, Mitchell Dunn, Benton Harkness, Jeffrey Harkness, Ed Bates, Bobbi Seymour, Lacy Brown, Nick Bramblett, Michael Nardella, Seamus Lawson, Merrick Haigler"}, {"Deal ID": "25301", "Deal Name": "Project Kingdom - K&D", "Client Firm": "K&D Landscaping", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Value Creation - Buy & Build", "Engagement Type": "Buy & Build", "Deal Lead": "Benton Harkness", "Accounting Lead": "Merrick Haigler", "State/Region (Firm)": "CA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 35000, "Total Fees": 35000, "Total Weighted Fees": 35000, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-09-12", "Last Updated": "2026-01-06", "Next Step": null, "Team Members": "Bobbi Seymour, Ed Bates, Bill Larsen, Mitchell Dunn, Gloria G. Palmer, Nick Bramblett, Lacy Brown, Benton Harkness, Jeffrey Harkness, Trey Mannion, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25462", "Deal Name": "Project Linen - Laurel Rock", "Client Firm": "Laurel Rock", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Value Creation - Buy & Build", "Engagement Type": "Growth Strategy", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Seamus Lawson", "State/Region (Firm)": "CT", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 10000, "Total Fees": 10000, "Total Weighted Fees": 10000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-12-02", "Last Updated": "2026-01-12", "Next Step": null, "Team Members": "Bill Larsen, Bobbi Seymour, Nick Bramblett, Gloria G. Palmer, Mitchell Dunn, Lacy Brown, Benton Harkness, Jeffrey Harkness, Trey Mannion, Ed Bates, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "26325", "Deal Name": "Project Novel - Nasim Landscape", "Client Firm": "Nasim Landscape", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Value Creation - Buy & Build", "Engagement Type": "Buy & Build", "Deal Lead": "Nick Bramblett", "Accounting Lead": "Seamus Lawson", "State/Region (Firm)": "WA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 35000, "Total Fees": 35000, "Total Weighted Fees": 35000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-02-24", "Last Updated": "2026-02-23", "Next Step": null, "Team Members": "Nick Bramblett, Bill Larsen, Gloria G. Palmer, Trey Mannion, Benton Harkness, Lacy Brown, Mitchell Dunn, Jeffrey Harkness, Ed Bates, Bobbi Seymour, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25393", "Deal Name": "Project Denim - Dennis' Seven Dees Landscaping", "Client Firm": "Dennis' Seven Dees Landscaping", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Value Monetization - Transact", "Engagement Type": "Buy & Build", "Deal Lead": "Nick Bramblett", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "OR", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 3500000, "EBITDA": null, "Total Projected Fees": 150000, "Total Actual Fees": 35000, "Total Fees": 185000, "Total Weighted Fees": 110000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-11-25", "Last Updated": "2026-03-03", "Next Step": null, "Team Members": "Nick Bramblett, Gloria G. Palmer, Bobbi Seymour, Lacy Brown, Benton Harkness, Jeffrey Harkness, Ed Bates, Mitchell Dunn, Bill Larsen, Trey Mannion, Brandon Goodwyn, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "27181", "Deal Name": "Project Smile - Smith Grounds Management, Inc.", "Client Firm": "Smith Grounds Management, Inc.", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Management Meetings", "Engagement Type": "Sell-Side M&A", "Deal Lead": "Brandon Stahlman", "Accounting Lead": "Merrick Haigler", "State/Region (Firm)": "NC", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": 1158191, "Total Projected Fees": 0, "Total Actual Fees": 30000, "Total Fees": 30000, "Total Weighted Fees": 30000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-05-05", "Last Updated": "2026-04-01", "Next Step": null, "Team Members": "Benton Harkness, Ed Bates, Trey Mannion, Lacy Brown, Gloria G. Palmer, Nick Bramblett, Bobbi Seymour, Jeffrey Harkness, Mitchell Dunn, Bill Larsen, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "28478", "Deal Name": "Project Stallion - Showplace Landscape Services", "Client Firm": "Showplace Landscape Svc", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Management Meetings", "Engagement Type": "Sell-Side M&A", "Deal Lead": "Brandon Stahlman", "Accounting Lead": "Michael Nardella", "State/Region (Firm)": "OR", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": 2900000, "Total Projected Fees": 0, "Total Actual Fees": 30000, "Total Fees": 30000, "Total Weighted Fees": 30000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": "2025-07-02", "Date Created": "2025-08-01", "Last Updated": "2026-03-20", "Next Step": null, "Team Members": "Jeffrey Harkness, Ed Bates, Trey Mannion, Lacy Brown, Gloria G. Palmer, Benton Harkness, Bobbi Seymour, Mitchell Dunn, Nick Bramblett, Bill Larsen, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "30116", "Deal Name": "Project Whistle - Wise Landscaping", "Client Firm": "Wise Landscaping LLC", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Management Meetings", "Engagement Type": "Sell-Side M&A", "Deal Lead": "Brandon Stahlman", "Accounting Lead": "Seamus Lawson", "State/Region (Firm)": "OH", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": 1000000, "Total Projected Fees": 0, "Total Actual Fees": 10000, "Total Fees": 10000, "Total Weighted Fees": 10000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-12-05", "Last Updated": "2026-04-08", "Next Step": null, "Team Members": "Lacy Brown, Bobbi Seymour, Jeffrey Harkness, Ed Bates, Bill Larsen, Benton Harkness, Nick Bramblett, Mitchell Dunn, Gloria G. Palmer, Trey Mannion, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "26073", "Deal Name": "Project Helium - Helping Hand Lawn Care", "Client Firm": "Helping Hand Lawn Care", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "LOI Negotiations", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Nick Bramblett", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "FL", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 13000000, "EBITDA": 1360000, "Total Projected Fees": 780000, "Total Actual Fees": 20000, "Total Fees": 800000, "Total Weighted Fees": 770000, "Probability of Close %": 1, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-02-04", "Last Updated": "2026-01-13", "Next Step": null, "Team Members": "Gloria G. Palmer, Bobbi Seymour, Trey Mannion, Bill Larsen, Jeffrey Harkness, Benton Harkness, Ed Bates, Nick Bramblett, Mitchell Dunn, Lacy Brown, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman, Mitchell Dunn"}, {"Deal ID": "25982", "Deal Name": "Project Atom - ACS Landscape Management", "Client Firm": "ACS Landscape Management", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Deal Management", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Benton Harkness", "Accounting Lead": "Bill Larsen", "State/Region (Firm)": "GA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 9100000, "EBITDA": 1700000, "Total Projected Fees": 566000, "Total Actual Fees": 0, "Total Fees": 566000, "Total Weighted Fees": 564000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-01-28", "Last Updated": "2025-12-11", "Next Step": null, "Team Members": "Jeffrey Harkness, Gloria G. Palmer, Bill Larsen, Benton Harkness, Bobbi Seymour, Nick Bramblett, Lacy Brown, Trey Mannion, Ed Bates, Mitchell Dunn, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25829", "Deal Name": "Project Cycle - Coastal Greenery", "Client Firm": "Coastal Greenery", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Deal Management", "Engagement Type": "Buy & Build", "Deal Lead": "Benton Harkness", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "GA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 36000000, "EBITDA": 4000000, "Total Projected Fees": 2160000, "Total Actual Fees": 25000, "Total Fees": 2185000, "Total Weighted Fees": 2185000, "Probability of Close %": 0.5, "Estimated Close Date": "2026-04-17", "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-01-15", "Last Updated": "2026-03-31", "Next Step": null, "Team Members": "Jeffrey Harkness, Gloria G. Palmer, Nick Bramblett, Benton Harkness, Bobbi Seymour, Mitchell Dunn, Lacy Brown, Ed Bates, Trey Mannion, Bill Larsen, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "26636", "Deal Name": "Project Magic - McCloud Aquatics", "Client Firm": "McCloud Aquatics", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Deal Management", "Engagement Type": "Buy-Side M&A", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "IL", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 15000000, "EBITDA": null, "Total Projected Fees": 275000, "Total Actual Fees": 25000, "Total Fees": 300000, "Total Weighted Fees": 300000, "Probability of Close %": 0.5, "Estimated Close Date": "2025-10-31", "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-03-17", "Last Updated": "2026-01-06", "Next Step": null, "Team Members": "Lacy Brown, Nick Bramblett, Mitchell Dunn, Bill Larsen, Brandon Goodwyn, Gloria G. Palmer, Trey Mannion, Bobbi Seymour, Jeffrey Harkness, Ed Bates, Benton Harkness, Michael Nardella"}, {"Deal ID": "26695", "Deal Name": "Project Purpose (AT) - Plantscapes", "Client Firm": "Nasim Landscape", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Deal Management", "Engagement Type": "Buy-Side M&A", "Deal Lead": "Nick Bramblett", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "WA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 1250000, "EBITDA": null, "Total Projected Fees": 150000, "Total Actual Fees": 0, "Total Fees": 150000, "Total Weighted Fees": 150000, "Probability of Close %": null, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-03-21", "Last Updated": "2026-01-06", "Next Step": null, "Team Members": "Nick Bramblett, Benton Harkness, Jeffrey Harkness, Mitchell Dunn, Lacy Brown, Ed Bates, Bobbi Seymour, Gloria G. Palmer, Trey Mannion, Bill Larsen, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25687", "Deal Name": "Project Windmill - Willow Landscaping", "Client Firm": "Willow Landscaping", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Deal Management", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Mitchell Dunn", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "MO", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 5600000, "EBITDA": 833809, "Total Projected Fees": 336000, "Total Actual Fees": 25000, "Total Fees": 361000, "Total Weighted Fees": 361000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-12-30", "Last Updated": "2025-10-15", "Next Step": null, "Team Members": "Benton Harkness, Mitchell Dunn, Gloria G. Palmer, Jeffrey Harkness, Bobbi Seymour, Ed Bates, Lacy Brown, Nick Bramblett, Trey Mannion, Bill Larsen, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25321", "Deal Name": "Project Charlie - Phoenix Landscape of Charleston", "Client Firm": "Phoenix Landscape of Charleston, Inc.", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "On Hold - Active Deal", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Bill Larsen", "State/Region (Firm)": "SC", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 3000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-02-21", "Last Updated": "2026-01-05", "Next Step": null, "Team Members": "Brandon Goodwyn, Bill Larsen, Mitchell Dunn, Benton Harkness, Gloria G. Palmer, Nick Bramblett, Lacy Brown, Trey Mannion, Bobbi Seymour, Jeffrey Harkness, Ed Bates, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25300", "Deal Name": "Project Indigo - IMAGESCAPES", "Client Firm": "IMAGESCAPES", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "On Hold - Active Deal", "Engagement Type": "Growth Strategy", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Bill Larsen", "State/Region (Firm)": "GA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 15000, "Total Actual Fees": 5000, "Total Fees": 20000, "Total Weighted Fees": 12500, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-10-03", "Last Updated": "2026-01-05", "Next Step": null, "Team Members": "Benton Harkness, Bill Larsen, Mitchell Dunn, Brandon Goodwyn, Gloria G. Palmer, Nick Bramblett, Lacy Brown, Bobbi Seymour, Jeffrey Harkness, Trey Mannion, Ed Bates, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25310", "Deal Name": "Project Lumens - Lucente Landscaping", "Client Firm": "Lucente Landscaping", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "On Hold - Active Deal", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Brandon Goodwyn", "State/Region (Firm)": "NY", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-11-14", "Last Updated": "2025-10-09", "Next Step": "have file, roll", "Team Members": "Jeffrey Harkness, Nick Bramblett, Mitchell Dunn, Lacy Brown, Gloria G. Palmer, Brandon Goodwyn, Bill Larsen, Ed Bates, Trey Mannion, Benton Harkness, Bobbi Seymour, Michael Nardella"}, {"Deal ID": "25330", "Deal Name": "Project Rooster - RYCO Landscaping", "Client Firm": "RYCO Landscaping", "Owner": "Jeffrey Harkness, Nick Bramblett", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "On Hold - Active Deal", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness, Nick Bramblett", "Accounting Lead": "Bill Larsen", "State/Region (Firm)": "IL", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 8000000, "EBITDA": 817581, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-01-26", "Last Updated": "2026-01-05", "Next Step": "Roll for mtg this week", "Team Members": "Nick Bramblett, Benton Harkness, Brandon Goodwyn, Gloria G. Palmer, Bobbi Seymour, Lacy Brown, Jeffrey Harkness, Ed Bates, Trey Mannion, Bill Larsen, Mitchell Dunn, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25440", "Deal Name": "Project Seahorse - Seasonal Impact", "Client Firm": "Seasonal Impact", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "On Hold - Active Deal", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Ed Bates", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "AB", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 35221, "Total Fees": 35221, "Total Weighted Fees": 35221, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-11-30", "Last Updated": "2026-01-05", "Next Step": null, "Team Members": "Gloria G. Palmer, Bill Larsen, Mitchell Dunn, Brandon Goodwyn, Benton Harkness, Nick Bramblett, Lacy Brown, Jeffrey Harkness, Ed Bates, Bobbi Seymour, Trey Mannion, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25320", "Deal Name": "Project Zinnia - Zak George Landscaping", "Client Firm": "Zak George Landscaping LLC", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "On Hold - Active Deal", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Mitchell Dunn", "State/Region (Firm)": "CO", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 20000, "Total Fees": 20000, "Total Weighted Fees": 20000, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-12-18", "Last Updated": "2026-01-05", "Next Step": "Continue building financial workbook, follow up on addbacks & do deal deck", "Team Members": "Gloria G. Palmer, Ed Bates, Bill Larsen, Mitchell Dunn, Benton Harkness, Nick Bramblett, Lacy Brown, Bobbi Seymour, Jeffrey Harkness, Trey Mannion, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "30740", "Deal Name": "Project Sunflower - Stay Green", "Client Firm": "Stay Green", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Deal Won - Hold for Approval", "Engagement Type": null, "Deal Lead": "Brandon Stahlman", "Accounting Lead": "Merrick Haigler", "State/Region (Firm)": "CA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": null, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2026-01-29", "Last Updated": "2026-02-18", "Next Step": null, "Team Members": "Benton Harkness, Trey Mannion, Ed Bates, Bobbi Seymour, Bill Larsen, Jeffrey Harkness, Nick Bramblett, Mitchell Dunn, Lacy Brown, Gloria G. Palmer, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "29580", "Deal Name": "Kunco", "Client Firm": "Big Lakes Lawncare", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Post-Close", "Engagement Type": "Buy-Side M&A", "Deal Lead": "Ed Bates", "Accounting Lead": null, "State/Region (Firm)": "MI", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 1225000, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 75000, "Total Fees": 75000, "Total Weighted Fees": 75000, "Probability of Close %": null, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2025-10-22", "Last Updated": "2025-11-07", "Next Step": null, "Team Members": "Bobbi Seymour, Mitchell Dunn, Benton Harkness, Trey Mannion, Lacy Brown, Bill Larsen, Gloria G. Palmer, Brandon Goodwyn, Nick Bramblett, Jeffrey Harkness, Ed Bates, Michael Nardella"}, {"Deal ID": "25302", "Deal Name": "Project Bison - Big Lakes Lawncare", "Client Firm": "Big Lakes Lawncare", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Post-Close", "Engagement Type": "Buy & Build", "Deal Lead": "Ed Bates", "Accounting Lead": "Brandon Goodwyn", "State/Region (Firm)": "MI", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 7350000, "EBITDA": 912000, "Total Projected Fees": 1161000, "Total Actual Fees": 20000, "Total Fees": 1181000, "Total Weighted Fees": 821000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-11-08", "Last Updated": "2026-02-02", "Next Step": null, "Team Members": "Gloria G. Palmer, Nick Bramblett, Lacy Brown, Benton Harkness, Ed Bates, Trey Mannion, Bill Larsen, Mitchell Dunn, Bobbi Seymour, Brandon Goodwyn, Jeffrey Harkness, Michael Nardella"}, {"Deal ID": "25327", "Deal Name": "Project Coyote", "Client Firm": "Curb Appeal", "Owner": "Jeffrey Harkness, Nick Bramblett", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Post-Close", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness, Nick Bramblett", "Accounting Lead": "Bill Larsen", "State/Region (Firm)": "AL", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 8750000, "EBITDA": 979000, "Total Projected Fees": 0, "Total Actual Fees": 473540, "Total Fees": 473540, "Total Weighted Fees": 473540, "Probability of Close %": 1, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2022-11-15", "Last Updated": "2025-12-17", "Next Step": null, "Team Members": "Jeffrey Harkness, Nick Bramblett, Lacy Brown, Trey Mannion, Ed Bates, Bill Larsen, Mitchell Dunn, Brandon Goodwyn, Benton Harkness, Bobbi Seymour, Gloria G. Palmer, Michael Nardella"}, {"Deal ID": "25318", "Deal Name": "Project Energy - English Garden Care", "Client Firm": "English Garden Care", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Post-Close", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Ed Bates", "Accounting Lead": "Brandon Goodwyn", "State/Region (Firm)": "CA", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 9108000, "EBITDA": 1100000, "Total Projected Fees": 0, "Total Actual Fees": 452623, "Total Fees": 452623, "Total Weighted Fees": 452623, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-10-26", "Last Updated": "2025-08-29", "Next Step": null, "Team Members": "Bobbi Seymour, Nick Bramblett, Trey Mannion, Lacy Brown, Jeffrey Harkness, Ed Bates, Bill Larsen, Mitchell Dunn, Benton Harkness, Brandon Goodwyn, Gloria G. Palmer, Michael Nardella"}, {"Deal ID": "25353", "Deal Name": "Project Evergreen - Enviroscapes", "Client Firm": "Enviroscapes;Schill Grounds Management", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Post-Close", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Gloria G. Palmer", "State/Region (Firm)": null, "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 45000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2021-12-16", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2025-10-09", "Next Step": null, "Team Members": "Jeffrey Harkness, Nick Bramblett, Gloria G. Palmer, Ed Bates, Trey Mannion, Mitchell Dunn, Brandon Goodwyn, Benton Harkness, Bobbi Seymour, Bill Larsen, Michael Nardella"}, {"Deal ID": "25339", "Deal Name": "Project Genesis - Green Environmental", "Client Firm": "Green Environmental Landscape, Inc.;Yellowstone Landscape", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Post-Close", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Gloria G. Palmer", "State/Region (Firm)": null, "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 790262, "Total Fees": 790262, "Total Weighted Fees": 790262, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-03-28", "Last Updated": "2025-10-09", "Next Step": "Deal in active due diligence.  Need to get financials of existing YL LV branch.", "Team Members": "Jeffrey Harkness, Nick Bramblett, Lacy Brown, Ed Bates, Trey Mannion, Mitchell Dunn, Bill Larsen, Brandon Goodwyn, Benton Harkness, Bobbi Seymour, Gloria G. Palmer, Michael Nardella"}, {"Deal ID": "25331", "Deal Name": "Project Ghost - Green Earth", "Client Firm": "Green Earth", "Owner": "Jeffrey Harkness, Nick Bramblett", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Post-Close", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness, Nick Bramblett", "Accounting Lead": "Brandon Goodwyn", "State/Region (Firm)": "MD", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 5500000, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 312540, "Total Fees": 312540, "Total Weighted Fees": 312540, "Probability of Close %": 0.8, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-09-12", "Last Updated": "2025-10-09", "Next Step": "LOI imminent, DD will kickoff shortly after.  Prepare to roll financials to Oct.", "Team Members": "Jeffrey Harkness, Trey Mannion, Ed Bates, Bill Larsen, Mitchell Dunn, Brandon Goodwyn, Gloria G. Palmer, Bobbi Seymour, Benton Harkness, Nick Bramblett, Michael Nardella"}, {"Deal ID": "25341", "Deal Name": "Project Midway - Maxalea", "Client Firm": "Maxalea;American Landscaping Partners", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Post-Close", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2024-04-04", "Engagement Start Date": "2023-08-01", "Date Created": "2023-08-01", "Last Updated": "2025-10-09", "Next Step": "work on disclosure schedules", "Team Members": "Gloria G. Palmer, Bill Larsen, Bobbi Seymour, Jeffrey Harkness, Michael Nardella"}, {"Deal ID": "25336", "Deal Name": "Project Navy - Northwest", "Client Firm": "Northwest Landscaping;Yellowstone Landscape", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Post-Close", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 12000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2024-04-08", "Engagement Start Date": "2022-12-13", "Date Created": "2022-12-13", "Last Updated": "2026-03-16", "Next Step": null, "Team Members": "Bill Larsen, Bobbi Seymour, Jeffrey Harkness, Gloria G. Palmer, Ed Bates, Lacy Brown, Benton Harkness, Mitchell Dunn, Trey Mannion, Nick Bramblett, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25322", "Deal Name": "Project Summer - Seasonal Solutions", "Client Firm": "Seasonal Solutions", "Owner": "Jeffrey Harkness, Nick Bramblett", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Post-Close", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness, Nick Bramblett", "Accounting Lead": "Mitchell Dunn", "State/Region (Firm)": "KS", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 467420, "Total Fees": 467420, "Total Weighted Fees": 467420, "Probability of Close %": 1, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2023-04-25", "Last Updated": "2025-10-09", "Next Step": null, "Team Members": "Jeffrey Harkness, Nick Bramblett, Lacy Brown, Trey Mannion, Ed Bates, Bill Larsen, Mitchell Dunn, Gloria G. Palmer, Bobbi Seymour, Brandon Goodwyn, Benton Harkness, Michael Nardella"}, {"Deal ID": "25304", "Deal Name": "Project Yukon - Yardmaster, Inc.", "Client Firm": "Yardmaster, Inc.", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Post-Close", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Ed Bates", "Accounting Lead": "Mitchell Dunn", "State/Region (Firm)": "OH", "Deal Status": "Active", "Sheet": "Active", "Estimated Transaction Value": 33000000, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 1102500, "Total Fees": 1102500, "Total Weighted Fees": 1102500, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": null, "Engagement Start Date": null, "Date Created": "2024-11-06", "Last Updated": "2026-03-24", "Next Step": null, "Team Members": "Jeffrey Harkness, Nick Bramblett, Benton Harkness, Lacy Brown, Bobbi Seymour, Ed Bates, Trey Mannion, Bill Larsen, Mitchell Dunn, Gloria G. Palmer, Brandon Goodwyn, Michael Nardella"}, {"Deal ID": "25906", "Deal Name": "Project Crypto - Crabapple", "Client Firm": "Crabapple, Inc.", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Deal Closed", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Mitchell Dunn", "Accounting Lead": "Michael Nardella", "State/Region (Firm)": "GA", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 27000000, "EBITDA": 3000000, "Total Projected Fees": 1650000, "Total Actual Fees": 0, "Total Fees": 1650000, "Total Weighted Fees": 1635000, "Probability of Close %": null, "Estimated Close Date": "2026-02-27", "Actual Close Date": "2026-03-03", "Engagement Start Date": null, "Date Created": "2025-01-21", "Last Updated": "2026-03-03", "Next Step": null, "Team Members": "Nick Bramblett, Bobbi Seymour, Bill Larsen, Benton Harkness, Mitchell Dunn, Lacy Brown, Gloria G. Palmer, Jeffrey Harkness, Trey Mannion, Ed Bates, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "28727", "Deal Name": "Project Driver - Drake 7 Dee's (AT)", "Client Firm": "Dennis' Seven Dees Landscaping", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Deal Closed", "Engagement Type": "Buy-Side M&A", "Deal Lead": "Nick Bramblett", "Accounting Lead": null, "State/Region (Firm)": "OR", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 150000, "Total Actual Fees": 0, "Total Fees": 150000, "Total Weighted Fees": 150000, "Probability of Close %": null, "Estimated Close Date": null, "Actual Close Date": "2026-02-17", "Engagement Start Date": null, "Date Created": "2025-08-27", "Last Updated": "2026-02-02", "Next Step": null, "Team Members": "Nick Bramblett, Benton Harkness, Jeffrey Harkness, Mitchell Dunn, Lacy Brown, Ed Bates, Bobbi Seymour, Gloria G. Palmer, Trey Mannion, Bill Larsen, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25325", "Deal Name": "Project Eclipse - Environmental Turf Management", "Client Firm": "ENVIRONMENTAL TURF MANAGEMENT", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Deal Closed", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Mitchell Dunn", "Accounting Lead": "Michael Nardella", "State/Region (Firm)": "GA", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 3000000, "EBITDA": 440000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": "2026-02-27", "Actual Close Date": "2026-03-03", "Engagement Start Date": null, "Date Created": "2023-06-26", "Last Updated": "2026-03-03", "Next Step": null, "Team Members": "Gloria G. Palmer, Mitchell Dunn, Benton Harkness, Bobbi Seymour, Nick Bramblett, Lacy Brown, Jeffrey Harkness, Ed Bates, Trey Mannion, Bill Larsen, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "26936", "Deal Name": "Project Falcon - Five Seasons Landscape", "Client Firm": "FIVE SEASONS LANDSCAPE MANAGEMENT, INC.", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Deal Closed", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Benton Harkness", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "OH", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 17000000, "EBITDA": 2100000, "Total Projected Fees": 1020000, "Total Actual Fees": 25000, "Total Fees": 1045000, "Total Weighted Fees": 1045000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": "2026-02-17", "Engagement Start Date": null, "Date Created": "2025-04-14", "Last Updated": "2026-02-13", "Next Step": null, "Team Members": "Bill Larsen, Nick Bramblett, Mitchell Dunn, Lacy Brown, Gloria G. Palmer, Bobbi Seymour, Jeffrey Harkness, Benton Harkness, Ed Bates, Trey Mannion, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "26107", "Deal Name": "Project Octagon - Outdoor Expressions", "Client Firm": "Outdoor Expressions, LLC", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Deal Closed", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Benton Harkness", "Accounting Lead": "Bill Larsen", "State/Region (Firm)": "GA", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 25500000, "EBITDA": null, "Total Projected Fees": 1800000, "Total Actual Fees": 25000, "Total Fees": 1825000, "Total Weighted Fees": 925000, "Probability of Close %": 0.5, "Estimated Close Date": null, "Actual Close Date": "2026-02-22", "Engagement Start Date": null, "Date Created": "2025-02-06", "Last Updated": "2026-02-09", "Next Step": null, "Team Members": "Jeffrey Harkness, Bill Larsen, Gloria G. Palmer, Benton Harkness, Bobbi Seymour, Lacy Brown, Nick Bramblett, Mitchell Dunn, Trey Mannion, Ed Bates, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "25306", "Deal Name": "Project Sonar - Sunrise of Nashville", "Client Firm": "Sunrise Of Nashville", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Deal Closed", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Benton Harkness", "Accounting Lead": "Mitchell Dunn", "State/Region (Firm)": "TN", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 3500000, "EBITDA": 500000, "Total Projected Fees": 330480, "Total Actual Fees": 10000, "Total Fees": 340480, "Total Weighted Fees": 310240, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": "2026-04-01", "Engagement Start Date": null, "Date Created": "2024-09-12", "Last Updated": "2025-10-17", "Next Step": null, "Team Members": "Bobbi Seymour, Benton Harkness, Ed Bates, Bill Larsen, Gloria G. Palmer, Mitchell Dunn, Nick Bramblett, Lacy Brown, Jeffrey Harkness, Trey Mannion, Michael Nardella, Seamus Lawson, Merrick Haigler, Brandon Stahlman"}, {"Deal ID": "27417", "Deal Name": "Good Guys (AT)", "Client Firm": "Big Lakes Lawncare", "Owner": "Ed Bates", "Owner_Clean": "Ed Bates", "Deal Stage": "Final Closeout", "Engagement Type": "Buy-Side M&A", "Deal Lead": "Ed Bates", "Accounting Lead": "Trey Mannion", "State/Region (Firm)": "MI", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 4000000, "EBITDA": 800000, "Total Projected Fees": 138000, "Total Actual Fees": 150000, "Total Fees": 288000, "Total Weighted Fees": 288000, "Probability of Close %": null, "Estimated Close Date": null, "Actual Close Date": "2026-02-06", "Engagement Start Date": null, "Date Created": "2025-05-13", "Last Updated": "2026-02-06", "Next Step": null, "Team Members": "Nick Bramblett, Ed Bates, Bobbi Seymour, Gloria G. Palmer, Trey Mannion, Bill Larsen, Benton Harkness, Jeffrey Harkness, Brandon Goodwyn, Mitchell Dunn, Lacy Brown, Michael Nardella"}, {"Deal ID": "25372", "Deal Name": "Project Alpha - APHIX", "Client Firm": "APHIX;Caltius Equity Partners", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 32000000, "EBITDA": 2800000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2022-10-21", "Engagement Start Date": "2022-04-04", "Date Created": "2022-04-04", "Last Updated": "2025-05-30", "Next Step": "Rolled through 07/31/22", "Team Members": "Bill Larsen, Gloria G. Palmer, Bobbi Seymour, Jeffrey Harkness"}, {"Deal ID": "25365", "Deal Name": "Project Aquaman - Aquascape", "Client Firm": "Aquascape Environmental", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "GA", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 5200000, "EBITDA": 650000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2023-02-28", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2025-04-16", "Next Step": null, "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25361", "Deal Name": "Project Ashes - PLMCC", "Client Firm": "Yardnique;Phoenix Landscape of Coastal Carolina", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 10000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2022-05-31", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2025-04-16", "Next Step": null, "Team Members": "Gloria G. Palmer, Jeffrey Harkness, Bobbi Seymour, Bill Larsen"}, {"Deal ID": "25368", "Deal Name": "Project BAM", "Client Firm": "Bamtreeservice;Schill Grounds Management;BAM Outdoor", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Buy-Side M&A", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2023-12-31", "Engagement Start Date": "2023-05-24", "Date Created": "2023-05-24", "Last Updated": "2025-05-30", "Next Step": null, "Team Members": "Bill Larsen, Bobbi Seymour, Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25370", "Deal Name": "Project Beta - Borst", "Client Firm": "Borst Landscape & Design Inc.;Mariani Enterprises LLC", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 15525000, "EBITDA": 2300000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2022-12-23", "Engagement Start Date": "2022-09-06", "Date Created": "2022-09-06", "Last Updated": "2025-04-16", "Next Step": "Rolled through September", "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25351", "Deal Name": "Project Buzz - Grass Groomers", "Client Firm": "Grass Groomers", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "OH", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2020-12-31", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2026-02-12", "Next Step": null, "Team Members": "Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25352", "Deal Name": "Project CC - LAI", "Client Firm": "Landscape Associates", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "AL", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 1700000, "EBITDA": 1100000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2025-04-18", "Engagement Start Date": null, "Date Created": "2022-11-03", "Last Updated": "2025-04-18", "Next Step": null, "Team Members": "Lacy Brown, Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25358", "Deal Name": "Project Cardinal - Focal Pointe", "Client Firm": "Focal Pointe", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Consulting", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "IL", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2025-01-06", "Engagement Start Date": null, "Date Created": "2024-10-04", "Last Updated": "2025-05-30", "Next Step": null, "Team Members": "Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25335", "Deal Name": "Project Colorado-Complete", "Client Firm": "Monarch Landscape Holdings, LLc;Complete Landscaping Service", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Gloria G. Palmer", "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 50000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2025-04-09", "Engagement Start Date": null, "Date Created": "2023-04-15", "Last Updated": "2025-01-21", "Next Step": null, "Team Members": "Nick Bramblett, Lacy Brown, Ed Bates, Trey Mannion, Brandon Goodwyn, Benton Harkness, Bill Larsen, Mitchell Dunn, Bobbi Seymour, Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25349", "Deal Name": "Project Crimson Tide - NatureScapes", "Client Firm": null, "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2021-10-15", "Engagement Start Date": "2023-01-06", "Date Created": "2023-01-06", "Last Updated": "2026-02-12", "Next Step": null, "Team Members": "Gloria G. Palmer, Jeffrey Harkness, Bobbi Seymour, Bill Larsen"}, {"Deal ID": "25369", "Deal Name": "Project Cyclone-Caldwell Tree", "Client Firm": "Caldwell Tree Care;Halle Capital", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": null, "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 13000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2023-10-11", "Engagement Start Date": "2023-04-04", "Date Created": "2023-04-04", "Last Updated": "2024-11-25", "Next Step": null, "Team Members": "Gloria G. Palmer, Bobbi Seymour, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25363", "Deal Name": "Project Dynamite - Dukes", "Client Firm": null, "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2021-09-30", "Engagement Start Date": "2023-01-06", "Date Created": "2023-01-06", "Last Updated": "2025-04-16", "Next Step": null, "Team Members": "Gloria G. Palmer, Jeffrey Harkness, Bobbi Seymour, Bill Larsen"}, {"Deal ID": "25345", "Deal Name": "Project Echo - Elevations", "Client Firm": "Schill Grounds Management;Elevations Landscaping", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Gloria G. Palmer", "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 12750000, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 725836, "Total Fees": 725836, "Total Weighted Fees": 725836, "Probability of Close %": 1, "Estimated Close Date": null, "Actual Close Date": "2024-06-02", "Engagement Start Date": "2022-04-14", "Date Created": "2022-04-14", "Last Updated": "2025-12-30", "Next Step": null, "Team Members": "Jeffrey Harkness, Nick Bramblett, Ed Bates, Trey Mannion, Mitchell Dunn, Brandon Goodwyn, Benton Harkness, Bobbi Seymour, Bill Larsen, Gloria G. Palmer, Michael Nardella"}, {"Deal ID": "25311", "Deal Name": "Project Empire - Earthworks", "Client Firm": "Earthworks", "Owner": "Jeffrey Harkness, Nick Bramblett", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness, Nick Bramblett", "Accounting Lead": "Brandon Goodwyn", "State/Region (Firm)": "TX", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 55000000, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 2848000, "Total Fees": 2848000, "Total Weighted Fees": 2848000, "Probability of Close %": 0, "Estimated Close Date": null, "Actual Close Date": "2026-02-05", "Engagement Start Date": null, "Date Created": "2024-02-20", "Last Updated": "2026-02-05", "Next Step": null, "Team Members": "Gloria G. Palmer, Nick Bramblett, Lacy Brown, Trey Mannion, Jeffrey Harkness, Bobbi Seymour, Ed Bates, Bill Larsen, Mitchell Dunn, Benton Harkness, Brandon Goodwyn, Michael Nardella"}, {"Deal ID": "25337", "Deal Name": "Project Gravity - Gregs", "Client Firm": "Greg's Lawn Care;Winter Services", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Gloria G. Palmer", "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 38000000, "EBITDA": 3000000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2025-04-18", "Engagement Start Date": null, "Date Created": "2022-09-13", "Last Updated": "2025-01-21", "Next Step": null, "Team Members": "Nick Bramblett, Ed Bates, Trey Mannion, Mitchell Dunn, Brandon Goodwyn, Benton Harkness, Bill Larsen, Bobbi Seymour, Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25347", "Deal Name": "Project Hero - Heartwood Tree Service", "Client Firm": "Heartwood Tree Service", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "NC", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 8000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2024-02-13", "Engagement Start Date": "2023-08-28", "Date Created": "2023-08-28", "Last Updated": "2025-04-09", "Next Step": null, "Team Members": "Bobbi Seymour, Bill Larsen, Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25355", "Deal Name": "Project Iceman - Winter Services", "Client Firm": "Winter Services;BrightView Landscape Services", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 17000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2022-01-31", "Engagement Start Date": "2021-07-15", "Date Created": "2021-07-15", "Last Updated": "2026-02-12", "Next Step": null, "Team Members": "Gloria G. Palmer, Bill Larsen, Bobbi Seymour, Jeffrey Harkness"}, {"Deal ID": "25343", "Deal Name": "Project Kazoo - LawnSouth", "Client Firm": "LawnSouth", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": null, "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "GA", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 1100000, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 73500, "Total Fees": 73500, "Total Weighted Fees": 11460, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2024-05-24", "Engagement Start Date": "2024-03-04", "Date Created": "2024-03-04", "Last Updated": "2025-09-15", "Next Step": null, "Team Members": "Bobbi Seymour, Jeffrey Harkness, Gloria G. Palmer, Bill Larsen"}, {"Deal ID": "25333", "Deal Name": "Project Kudzu - Koehn Outdoor", "Client Firm": "Koehn Outdoor", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": "Brandon Goodwyn", "State/Region (Firm)": "FL", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 175000, "Total Fees": 175000, "Total Weighted Fees": 175000, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2025-05-30", "Engagement Start Date": null, "Date Created": "2024-08-14", "Last Updated": "2025-10-09", "Next Step": null, "Team Members": "Brandon Goodwyn, Nick Bramblett, Lacy Brown, Bobbi Seymour, Jeffrey Harkness, Ed Bates, Trey Mannion, Bill Larsen, Mitchell Dunn, Benton Harkness, Gloria G. Palmer, Michael Nardella"}, {"Deal ID": "25334", "Deal Name": "Project Laser - Largen", "Client Firm": "Largen Inc.", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": null, "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "AL", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 9500000, "EBITDA": 1500000, "Total Projected Fees": 0, "Total Actual Fees": 745754, "Total Fees": 745754, "Total Weighted Fees": 745754, "Probability of Close %": 1, "Estimated Close Date": null, "Actual Close Date": "2025-01-06", "Engagement Start Date": null, "Date Created": "2023-04-15", "Last Updated": "2025-09-15", "Next Step": null, "Team Members": "Nick Bramblett, Lacy Brown, Ed Bates, Trey Mannion, Mitchell Dunn, Brandon Goodwyn, Benton Harkness, Bill Larsen, Bobbi Seymour, Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25356", "Deal Name": "Project Liberty - Louisiana Landscape", "Client Firm": "Louisiana Landscape Specialty;Landscape Workshop", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 11000000, "EBITDA": 1700000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2023-06-30", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2025-04-15", "Next Step": null, "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness, Michael Nardella"}, {"Deal ID": "25371", "Deal Name": "Project Matrix - Mahoney", "Client Firm": "Mahoney Associates Inc.;Kian Capital Partners LLC;Diamond Landscaping", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 14137500, "EBITDA": 1950000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2023-02-14", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2025-04-16", "Next Step": "Kaitlyn rolling through September - still finalizing addbacks", "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25348", "Deal Name": "Project Mountain", "Client Firm": "APHIX;Mountain Top Landscaping", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2025-04-18", "Engagement Start Date": null, "Date Created": "2022-09-13", "Last Updated": "2025-05-30", "Next Step": null, "Team Members": "Bobbi Seymour, Bill Larsen, Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25364", "Deal Name": "Project Muse - Mountainscapes", "Client Firm": "Mountainscapes", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "WY", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 12000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2023-08-01", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2025-04-16", "Next Step": "Financials Through August", "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25344", "Deal Name": "Project Neptune - Nativegreen", "Client Firm": "Plexus Capital;Nativegreen Pest Control & Fertilization, LLC", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 3000000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2026-02-19", "Engagement Start Date": null, "Date Created": "2022-09-13", "Last Updated": "2025-04-30", "Next Step": "Rolled through August 2022", "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25360", "Deal Name": "Project Odyssey - O'Donnell", "Client Firm": "Yellowstone Landscape;O'Donnell's Landscape Services,", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": null, "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 16000000, "EBITDA": 1900000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2022-07-31", "Engagement Start Date": "2022-04-14", "Date Created": "2022-04-14", "Last Updated": "2025-05-30", "Next Step": null, "Team Members": "Bobbi Seymour, Bill Larsen, Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25340", "Deal Name": "Project Paradise-Peconic", "Client Firm": "Peconic Lawn & Tree Care;Perennial Services Group", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 5000000, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 0, "Total Fees": 0, "Total Weighted Fees": 0, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2025-04-30", "Engagement Start Date": null, "Date Created": "2023-04-04", "Last Updated": "2026-02-12", "Next Step": null, "Team Members": "Gloria G. Palmer, Bobbi Seymour, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25359", "Deal Name": "Project Passport - The Pruning Guru", "Client Firm": "The Pruning Guru, Inc.", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "GA", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 10000, "Total Fees": 10000, "Total Weighted Fees": 10000, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2024-11-19", "Engagement Start Date": "2024-05-09", "Date Created": "2024-05-09", "Last Updated": "2025-05-30", "Next Step": null, "Team Members": "Bobbi Seymour, Bill Larsen, Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25346", "Deal Name": "Project Perfect - Per Fect A Lawn", "Client Firm": "Per Fect A Lawn;Yard Works / Yard Alliance", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 2750000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2023-10-17", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2026-02-12", "Next Step": null, "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness, Michael Nardella"}, {"Deal ID": "25350", "Deal Name": "Project Pilot - Landmark", "Client Firm": null, "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2021-08-31", "Engagement Start Date": "2023-01-06", "Date Created": "2023-01-06", "Last Updated": "2026-02-12", "Next Step": null, "Team Members": "Mitchell Dunn, Trey Mannion, Brandon Goodwyn, Benton Harkness, Ed Bates, Nick Bramblett, Lacy Brown, Gloria G. Palmer, Jeffrey Harkness, Bobbi Seymour, Bill Larsen"}, {"Deal ID": "25367", "Deal Name": "Project Skyfall - GreenSweep", "Client Firm": "GreenSweep", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "MD", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 15100000, "EBITDA": 2500000, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2023-06-13", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2025-04-16", "Next Step": null, "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25362", "Deal Name": "Project Slapshot - TLC", "Client Firm": "Schill Grounds Management;Tender Lawn Care", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 16350000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2022-06-21", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2025-04-16", "Next Step": null, "Team Members": "Gloria G. Palmer, Jeffrey Harkness, Bobbi Seymour, Bill Larsen"}, {"Deal ID": "25354", "Deal Name": "Project Staple - Southeast", "Client Firm": "Landscape Workshop;Southeast Landscapes", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 7250000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2022-12-13", "Engagement Start Date": "2022-09-13", "Date Created": "2022-09-13", "Last Updated": "2026-02-12", "Next Step": "Rolled through August", "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25342", "Deal Name": "Project Sunshine - SummerScapes", "Client Firm": "SummerScapes Inc.;Oasis Irrigation Systems, Inc.", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": 750000, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2026-02-19", "Engagement Start Date": null, "Date Created": "2022-09-13", "Last Updated": "2025-04-30", "Next Step": "Rolled through July (Bill has # through August)", "Team Members": "Bobbi Seymour, Gloria G. Palmer, Bill Larsen, Jeffrey Harkness"}, {"Deal ID": "25338", "Deal Name": "Project Umbrella - Unique", "Client Firm": "Unique Environmental Landscapes", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": "Valuation & Structure (Phase 2)", "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": "GA", "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": 0, "Total Actual Fees": 156000, "Total Fees": 156000, "Total Weighted Fees": 156000, "Probability of Close %": 1, "Estimated Close Date": null, "Actual Close Date": "2024-02-29", "Engagement Start Date": "2023-09-25", "Date Created": "2023-09-25", "Last Updated": "2025-09-15", "Next Step": null, "Team Members": "Nick Bramblett, Lacy Brown, Ed Bates, Trey Mannion, Mitchell Dunn, Bobbi Seymour, Benton Harkness, Brandon Goodwyn, Bill Larsen, Gloria G. Palmer, Jeffrey Harkness"}, {"Deal ID": "25357", "Deal Name": "Project War Eagle - Triple J", "Client Firm": "Estate Landscaping & Lawn Management;Triple J Management, LLC", "Owner": "Jeffrey Harkness", "Owner_Clean": "Jeffrey Harkness", "Deal Stage": "Final Closeout", "Engagement Type": null, "Deal Lead": "Jeffrey Harkness", "Accounting Lead": null, "State/Region (Firm)": null, "Deal Status": "Closed", "Sheet": "Closed", "Estimated Transaction Value": null, "EBITDA": null, "Total Projected Fees": null, "Total Actual Fees": null, "Total Fees": null, "Total Weighted Fees": null, "Probability of Close %": 0.01, "Estimated Close Date": null, "Actual Close Date": "2024-11-19", "Engagement Start Date": "2023-10-09", "Date Created": "2023-10-09", "Last Updated": "2025-05-30", "Next Step": null, "Team Members": "Gloria G. Palmer, Lacy Brown, Bobbi Seymour, Bill Larsen, Jeffrey Harkness"}];
+const TODAY = new Date('2026-04-08');
+const STAGE_ORDER = ['Target Prospecting','Pre-Work','Value Creation - Growth Strategy','Value Creation - Buy & Build','Value Monetization - Transact','Management Meetings','LOI Negotiations','Deal Management','On Hold - Active Deal','Deal Won - Hold for Approval','Post-Close','Deal Closed','Final Closeout'];
+
+// ── HELPERS ────────────────────────────────────────────────────────────────
+const fmt$ = v => v == null ? '—' : '$' + Math.round(v).toLocaleString();
+const fmtM = v => v == null ? '—' : '$' + (v/1e6).toFixed(1) + 'M';
+const fmtK = v => v == null ? '—' : v >= 1e6 ? fmtM(v) : '$' + Math.round(v).toLocaleString();
+const fmtPct = v => v == null ? '—' : Math.round(v*100) + '%';
+const fmtDate = s => s ? new Date(s).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '—';
+const daysSince = s => s ? Math.floor((TODAY - new Date(s)) / 86400000) : 9999;
+const EXEMPT_STAGES = new Set(['Post-Close','Deal Closed','Final Closeout','Deal Won - Hold for Approval']);
+const staleness = r => {
+  if (r['Deal Status'] !== 'Active') return 'closed';
+  if (EXEMPT_STAGES.has(r['Deal Stage'])) return 'current';
+  const d = daysSince(r['Last Updated']);
+  if (d >= 14) return 'stale';
+  if (d >= 7) return 'review';
+  return 'current';
+};
+const sum = (arr, key) => arr.reduce((a,r) => a + (r[key] || 0), 0);
+const groupBy = (arr, key) => arr.reduce((m,r) => { const k = r[key]||'Unknown'; (m[k]=m[k]||[]).push(r); return m; }, {});
+const sortedEntries = (obj, valFn, desc=true) => Object.entries(obj).sort((a,b) => desc ? valFn(b[1])-valFn(a[1]) : valFn(a[1])-valFn(b[1]));
+
+function badgeHtml(status) {
+  if (status==='stale') return '<span class="badge b-stale">Stale</span>';
+  if (status==='review') return '<span class="badge b-review">Review</span>';
+  if (status==='current') return '<span class="badge b-current">Current</span>';
+  return '<span class="badge b-na">—</span>';
+}
+function hbar(label, val, maxVal, color, valFmt, sm=false) {
+  const pct = maxVal > 0 ? Math.min(100, val/maxVal*100) : 0;
+  return `<div class="hbar-row">
+    <div class="hbar-label${sm?' sm':''}" title="${label}">${label}</div>
+    <div class="hbar-track"><div class="hbar-fill" style="width:${pct}%;background:${color}"></div></div>
+    <div class="hbar-val">${valFmt}</div>
+  </div>`;
+}
+
+// ── FILTER STATE ────────────────────────────────────────────────────────────
+let filteredData = [...RAW_DATA];
+
+function getFilters() {
+  return {
+    status: document.getElementById('f-status').value,
+    owner:  document.getElementById('f-owner').value,
+    stage:  document.getElementById('f-stage').value,
+    type:   document.getElementById('f-type').value,
+    state:  document.getElementById('f-state').value,
+    dl:     document.getElementById('f-dl').value,
+    al:     document.getElementById('f-al').value,
+  };
+}
+
+function applyFilters() {
+  const f = getFilters();
+  filteredData = RAW_DATA.filter(r =>
+    (!f.status || r['Deal Status'] === f.status) &&
+    (!f.owner  || r['Owner_Clean'] === f.owner) &&
+    (!f.stage  || r['Deal Stage'] === f.stage) &&
+    (!f.type   || r['Engagement Type'] === f.type) &&
+    (!f.state  || r['State/Region (Firm)'] === f.state) &&
+    (!f.dl     || r['Deal Lead'] === f.dl) &&
+    (!f.al     || r['Accounting Lead'] === f.al)
+  );
+  document.getElementById('filter-count').textContent = `${filteredData.length} of ${RAW_DATA.length} deals`;
+  renderAll();
+}
+
+function resetFilters() {
+  ['f-status','f-owner','f-stage','f-type','f-state','f-dl','f-al'].forEach(id => document.getElementById(id).value = '');
+  applyFilters();
+}
+
+function populateFilters() {
+  const owners = [...new Set(RAW_DATA.map(r=>r['Owner_Clean']).filter(Boolean))].sort();
+  const stages = STAGE_ORDER.filter(s => RAW_DATA.some(r=>r['Deal Stage']===s));
+  const types  = [...new Set(RAW_DATA.map(r=>r['Engagement Type']).filter(Boolean))].sort();
+  const states = [...new Set(RAW_DATA.map(r=>r['State/Region (Firm)']).filter(Boolean))].sort();
+  const dls    = [...new Set(RAW_DATA.map(r=>r['Deal Lead']).filter(Boolean))].sort();
+  const als    = [...new Set(RAW_DATA.map(r=>r['Accounting Lead']).filter(Boolean))].sort();
+  const fill = (id, opts) => { const el = document.getElementById(id); opts.forEach(o => { const opt=document.createElement('option'); opt.value=o; opt.textContent=o; el.appendChild(opt); }); };
+  fill('f-owner', owners); fill('f-stage', stages); fill('f-type', types); fill('f-state', states); fill('f-dl', dls); fill('f-al', als);
+}
+
+// ── CHARTS ──────────────────────────────────────────────────────────────────
+const charts = {};
+function makeChart(id, config) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx, config);
+}
+
+// ── RENDER FUNCTIONS ────────────────────────────────────────────────────────
+function renderSummary() {
+  const active = filteredData.filter(r=>r['Deal Status']==='Active');
+  const closed = filteredData.filter(r=>r['Deal Status']==='Closed');
+  const staleCount = active.filter(r=>staleness(r)==='stale').length;
+  const activeFees = sum(active,'Total Fees');
+  const closedFees = sum(closed,'Total Fees');
+  const weighted   = sum(active,'Total Weighted Fees');
+
+  document.getElementById('summary-kpis').innerHTML = `
+    <div class="kpi-card blue"><div class="kpi-val">${active.length}</div><div class="kpi-label">Active Deals</div></div>
+    <div class="kpi-card green"><div class="kpi-val">${closed.length}</div><div class="kpi-label">Closed Deals</div></div>
+    <div class="kpi-card navy"><div class="kpi-val">${fmtM(activeFees)}</div><div class="kpi-label">Active Fees</div><div class="kpi-sub">Total pipeline fees</div></div>
+    <div class="kpi-card lime"><div class="kpi-val">${fmtM(closedFees)}</div><div class="kpi-label">Closed Fees</div><div class="kpi-sub">Revenue recognized</div></div>
+    <div class="kpi-card amber"><div class="kpi-val">${fmtM(weighted)}</div><div class="kpi-label">Weighted Pipeline</div><div class="kpi-sub">Probability-adjusted</div></div>
+    <div class="kpi-card red"><div class="kpi-val ${staleCount>=5?'red':''}">${staleCount}</div><div class="kpi-label">Stale Deals</div><div class="kpi-sub">14+ days no update</div></div>
+  `;
+
+  // Stage bars
+  const byStage = groupBy(active, 'Deal Stage');
+  const maxStage = Math.max(...Object.values(byStage).map(a=>a.length), 1);
+  const colors = ['#0F1E35','#1B2A4A','#243659','#2E4570','#365480','#3D6090','#4A72A8','#5A85BF','#7B9FD4','#9BBAE0','#B8CFEC'];
+  document.getElementById('stage-bars').innerHTML = STAGE_ORDER
+    .filter(s=>byStage[s])
+    .map((s,i)=>hbar(s, byStage[s].length, maxStage, colors[i]||'#7B9FD4', `${byStage[s].length} deal${byStage[s].length>1?'s':''}` ))
+    .join('');
+  document.getElementById('stage-meta').textContent = `${active.length} active`;
+
+  // Owner bars
+  const byOwner = groupBy(active,'Owner_Clean');
+  const maxOwnerFee = Math.max(...Object.values(byOwner).map(a=>sum(a,'Total Fees')),1);
+  document.getElementById('owner-bars').innerHTML = sortedEntries(byOwner, a=>sum(a,'Total Fees'))
+    .map(([o,a],i)=>hbar(o,sum(a,'Total Fees'),maxOwnerFee,i===0?'#0F1E35':'#2E5090',fmtM(sum(a,'Total Fees'))))
+    .join('');
+
+  // Type bars
+  const byType = groupBy(active,'Engagement Type');
+  const maxType = Math.max(...Object.values(byType).map(a=>a.length),1);
+  document.getElementById('type-bars').innerHTML = sortedEntries(byType,a=>a.length)
+    .filter(([t])=>t&&t!=='Unknown')
+    .map(([t,a],i)=>hbar(t,a.length,maxType,['#0A7EC2','#1B2A4A','#8DC63F','#0F1E35','#4A72A8'][i]||'#7B9FD4',`${a.length}`))
+    .join('');
+
+  // Fee summary chart
+  makeChart('chart-fee-summary', {
+    type:'bar',
+    data:{
+      labels:['Active Fees','Closed Fees','Weighted'],
+      datasets:[{
+        data:[activeFees/1e6, closedFees/1e6, weighted/1e6],
+        backgroundColor:['#0A7EC2','#8DC63F','#D68910'],
+        borderRadius:4, borderSkipped:false
+      }]
+    },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{display:false}, tooltip:{callbacks:{label:c=>'$'+c.parsed.y.toFixed(1)+'M'}}},
+      scales:{
+        x:{grid:{display:false},ticks:{color:'#5A7099',font:{family:'DM Sans',size:10}}},
+        y:{grid:{color:'#E8EDF5'},ticks:{color:'#5A7099',font:{family:'DM Mono',size:9},callback:v=>'$'+v+'M'}}
+      }
+    }
+  });
+
+  // Prob distribution chart
+  const probBuckets = {'100%':0,'75-99%':0,'50-74%':0,'25-49%':0,'1-24%':0,'0%':0};
+  active.forEach(r=>{
+    const p = (r['Probability of Close %']||0)*100;
+    if(p===100) probBuckets['100%']++;
+    else if(p>=75) probBuckets['75-99%']++;
+    else if(p>=50) probBuckets['50-74%']++;
+    else if(p>=25) probBuckets['25-49%']++;
+    else if(p>=1) probBuckets['1-24%']++;
+    else probBuckets['0%']++;
+  });
+  makeChart('chart-prob',{
+    type:'doughnut',
+    data:{
+      labels:Object.keys(probBuckets),
+      datasets:[{data:Object.values(probBuckets),backgroundColor:['#1E8449','#2ECC71','#0A7EC2','#8DC63F','#D68910','#E8EDF5'],borderWidth:2,borderColor:'#fff'}]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:false,cutout:'65%',
+      plugins:{legend:{position:'right',labels:{font:{family:'DM Sans',size:10},color:'#5A7099',boxWidth:10,padding:8}},
+      tooltip:{callbacks:{label:c=>`${c.label}: ${c.parsed} deals`}}}
+    }
+  });
+}
+
+function renderRoster() {
+  const active = filteredData.filter(r=>r['Deal Status']==='Active')
+    .sort((a,b)=>STAGE_ORDER.indexOf(a['Deal Stage'])-STAGE_ORDER.indexOf(b['Deal Stage']));
+  const totalFees = sum(active,'Total Fees');
+  document.getElementById('roster-meta').textContent = `${active.length} deals · Total: ${fmtM(totalFees)}`;
+  document.getElementById('roster-body').innerHTML = active.map(r=>{
+    const s = staleness(r);
+    const days = daysSince(r['Last Updated']);
+    const daysDisplay = days===9999?'—':days;
+    const daysColor = days>=14?'color:var(--red);font-weight:600':days>=7?'color:var(--amber);font-weight:600':'';
+    const prob = r['Probability of Close %'];
+    const probHtml = prob!=null ? `<div style="font-family:'DM Mono';font-size:10px">${fmtPct(prob)}</div><div class="prob-bar" style="width:60px"><div class="prob-fill" style="width:${prob*100}%"></div></div>` : '—';
+    return `<tr>
+      <td class="wrap" title="${r['Deal Name']}">${r['Deal Name']}</td>
+      <td>${r['Client Firm']||'—'}</td>
+      <td>${r['Deal Stage']||'—'}</td>
+      <td>${r['Engagement Type']||'—'}</td>
+      <td>${r['Owner_Clean']||'—'}</td>
+      <td>${r['Deal Lead']||'—'}</td>
+      <td>${r['State/Region (Firm)']||'<span class="badge b-na">—</span>'}</td>
+      <td style="font-family:'DM Mono'">${fmtK(r['Total Fees'])}</td>
+      <td>${probHtml}</td>
+      <td style="font-family:'DM Mono';font-size:10px">${fmtDate(r['Estimated Close Date'])}</td>
+      <td>${badgeHtml(s)}</td>
+      <td style="${daysColor}">${daysDisplay}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('roster-foot').innerHTML = `<td colspan="7">Total (${active.length} deals)</td><td>${fmtM(totalFees)}</td><td colspan="4"></td>`;
+}
+
+function renderProjected() {
+  const active = filteredData.filter(r=>r['Deal Status']==='Active');
+  const withData = active.filter(r=>r['Total Projected Fees']>0);
+  const missing = active.filter(r=>!r['Total Projected Fees']||r['Total Projected Fees']===0);
+  const totalProj = sum(withData,'Total Projected Fees');
+  const coverage = active.length>0?(withData.length/active.length*100).toFixed(0):0;
+
+  document.getElementById('proj-alert').innerHTML = `<span>⚠</span><div><strong>Data gap:</strong> ${missing.length} of ${active.length} active deals (${100-Number(coverage)}%) have no projected fee data. These are excluded from totals below.</div>`;
+  document.getElementById('proj-kpis').innerHTML = `
+    <div class="kpi-card blue"><div class="kpi-val">${fmtM(totalProj)}</div><div class="kpi-label">Total Projected Fees</div><div class="kpi-sub">Active deals with data</div></div>
+    <div class="kpi-card navy"><div class="kpi-val">${withData.length}</div><div class="kpi-label">Deals with Projections</div><div class="kpi-sub">of ${active.length} active</div></div>
+    <div class="kpi-card red"><div class="kpi-val">${missing.length}</div><div class="kpi-label">Missing Projections</div><div class="kpi-sub">No engagement letter yet</div></div>
+    <div class="kpi-card lime"><div class="kpi-val">${coverage}%</div><div class="kpi-label">Data Coverage</div></div>
+  `;
+
+  const sorted = [...withData].sort((a,b)=>(b['Total Projected Fees']||0)-(a['Total Projected Fees']||0)).slice(0,15);
+  const maxP = sorted[0]?.['Total Projected Fees']||1;
+  document.getElementById('proj-deal-bars').innerHTML = sorted.map((r,i)=>
+    hbar(r['Deal Name'],r['Total Projected Fees'],maxP,'#0A7EC2',fmtK(r['Total Projected Fees']))).join('');
+
+  const byType = groupBy(withData,'Engagement Type');
+  const maxT = Math.max(...Object.values(byType).map(a=>sum(a,'Total Projected Fees')),1);
+  document.getElementById('proj-type-bars').innerHTML = sortedEntries(byType,a=>sum(a,'Total Projected Fees'))
+    .filter(([t])=>t&&t!=='Unknown')
+    .map(([t,a])=>hbar(t,sum(a,'Total Projected Fees'),maxT,'#1B2A4A',fmtM(sum(a,'Total Projected Fees')),true)).join('');
+
+  const byOwner = groupBy(withData,'Owner_Clean');
+  const maxO = Math.max(...Object.values(byOwner).map(a=>sum(a,'Total Projected Fees')),1);
+  document.getElementById('proj-owner-bars').innerHTML = sortedEntries(byOwner,a=>sum(a,'Total Projected Fees'))
+    .map(([o,a])=>hbar(o,sum(a,'Total Projected Fees'),maxO,'#243659',fmtM(sum(a,'Total Projected Fees')),true)).join('');
+
+  document.getElementById('proj-missing-meta').textContent = `${missing.length} deals`;
+  document.getElementById('proj-missing-body').innerHTML = missing.map(r=>`<tr>
+    <td class="wrap">${r['Deal Name']}</td><td>${r['Deal Stage']}</td><td>${r['Owner_Clean']}</td>
+    <td style="font-family:'DM Mono';font-size:10px">${fmtDate(r['Last Updated'])}</td>
+  </tr>`).join('');
+}
+
+function renderActual() {
+  const active = filteredData.filter(r=>r['Deal Status']==='Active');
+  const closed = filteredData.filter(r=>r['Deal Status']==='Closed');
+  const activeActual = sum(active,'Total Actual Fees');
+  const closedFees = sum(closed,'Total Fees');
+  const combined = activeActual + closedFees;
+  const projected = sum(active.filter(r=>r['Total Projected Fees']>0),'Total Projected Fees');
+  const rate = projected>0 ? (activeActual/projected*100).toFixed(0) : 0;
+
+  document.getElementById('actual-alert').innerHTML = `<span>⚠</span><div><strong>Data gap:</strong> Active deals with $0 actual fees are early-stage or awaiting a success fee close event. Actual fees = retainers collected to date.</div>`;
+  document.getElementById('actual-kpis').innerHTML = `
+    <div class="kpi-card green"><div class="kpi-val">${fmtM(activeActual)}</div><div class="kpi-label">Active Fees Collected</div><div class="kpi-sub">Retainers earned</div></div>
+    <div class="kpi-card lime"><div class="kpi-val">${fmtM(closedFees)}</div><div class="kpi-label">Closed Deal Revenue</div><div class="kpi-sub">Revenue recognized</div></div>
+    <div class="kpi-card navy"><div class="kpi-val">${fmtM(combined)}</div><div class="kpi-label">Combined Actual</div><div class="kpi-sub">Active + Closed</div></div>
+    <div class="kpi-card blue"><div class="kpi-val">${rate}%</div><div class="kpi-label">Collection Rate</div><div class="kpi-sub">Actual vs Projected</div></div>
+  `;
+
+  const withActual = active.filter(r=>r['Total Actual Fees']>0).sort((a,b)=>b['Total Actual Fees']-a['Total Actual Fees']);
+  const maxA = withActual[0]?.['Total Actual Fees']||1;
+  document.getElementById('actual-deal-bars').innerHTML = withActual.map(r=>
+    hbar(r['Deal Name'],r['Total Actual Fees'],maxA,'#1E8449',fmtK(r['Total Actual Fees']))).join('');
+
+  const byOwner = groupBy(active.filter(r=>r['Total Actual Fees']>0),'Owner_Clean');
+  const maxO = Math.max(...Object.values(byOwner).map(a=>sum(a,'Total Actual Fees')),1);
+  document.getElementById('actual-owner-bars').innerHTML = sortedEntries(byOwner,a=>sum(a,'Total Actual Fees'))
+    .map(([o,a])=>hbar(o,sum(a,'Total Actual Fees'),maxO,'#1E8449',fmtM(sum(a,'Total Actual Fees')),true)).join('');
+
+  const topClosed = [...closed].sort((a,b)=>(b['Total Fees']||0)-(a['Total Fees']||0)).slice(0,10);
+  document.getElementById('closed-body').innerHTML = topClosed.map(r=>`<tr>
+    <td class="wrap">${r['Deal Name']}</td><td>${r['Owner_Clean']}</td>
+    <td style="font-family:'DM Mono';font-size:10px">${fmtDate(r['Actual Close Date'])}</td>
+    <td style="font-family:'DM Mono'">${fmtK(r['Total Fees'])}</td>
+  </tr>`).join('');
+}
+
+function renderEBITDA() {
+  const all = filteredData;
+  const withE = all.filter(r=>r['EBITDA']>0);
+  const missing = all.filter(r=>!r['EBITDA']||r['EBITDA']===0);
+  const activeE = filteredData.filter(r=>r['Deal Status']==='Active'&&r['EBITDA']>0);
+  const withMultiple = withE.filter(r=>r['Estimated Transaction Value']>0);
+  const avgMultiple = withMultiple.length>0 ? withMultiple.reduce((s,r)=>s+(r['Estimated Transaction Value']/r['EBITDA']),0)/withMultiple.length : 0;
+
+  document.getElementById('ebitda-alert').innerHTML = `<span>⚠</span><div><strong>Data gaps:</strong> EBITDA: ${missing.length} of ${all.length} deals missing (${Math.round(missing.length/all.length*100)}%). TTM Revenue is not captured in MadeMarket — Enterprise Value is shown as the size proxy. EV/EBITDA multiples shown only where both fields are populated.</div>`;
+  document.getElementById('ebitda-kpis').innerHTML = `
+    <div class="kpi-card blue"><div class="kpi-val">${withE.length}</div><div class="kpi-label">Deals with EBITDA</div><div class="kpi-sub">of ${all.length} total</div></div>
+    <div class="kpi-card red"><div class="kpi-val">${missing.length}</div><div class="kpi-label">Missing EBITDA</div><div class="kpi-sub">Needs manual entry</div></div>
+    <div class="kpi-card navy"><div class="kpi-val">${fmtM(sum(activeE,'EBITDA'))}</div><div class="kpi-label">Active EBITDA Total</div><div class="kpi-sub">Where data exists</div></div>
+    <div class="kpi-card amber"><div class="kpi-val">${avgMultiple>0?avgMultiple.toFixed(1)+'x':'—'}</div><div class="kpi-label">Avg EV / EBITDA</div><div class="kpi-sub">${withMultiple.length} deals with both</div></div>
+  `;
+
+  document.getElementById('ebitda-tbl-meta').textContent = `${withE.length} deals`;
+  const sortedE = [...withE].sort((a,b)=>(b['EBITDA']||0)-(a['EBITDA']||0));
+  document.getElementById('ebitda-body').innerHTML = sortedE.map(r=>{
+    const mult = r['Estimated Transaction Value']&&r['EBITDA'] ? (r['Estimated Transaction Value']/r['EBITDA']) : null;
+    const multColor = mult ? (mult>=10?'color:var(--green)':mult<7?'color:var(--amber)':'') : '';
+    return `<tr>
+      <td class="wrap">${r['Deal Name']}</td>
+      <td>${r['Deal Status']==='Active'?'<span class="badge b-active">Active</span>':'<span class="badge b-closed">Closed</span>'}</td>
+      <td style="font-family:'DM Mono'">${fmt$(r['EBITDA'])}</td>
+      <td style="font-family:'DM Mono'">${r['Estimated Transaction Value']?fmt$(r['Estimated Transaction Value']):'<span class="badge b-na">—</span>'}</td>
+      <td style="font-family:'DM Mono';${multColor}">${mult?mult.toFixed(1)+'x':'<span class="badge b-na">—</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  const activeWithE = activeE.sort((a,b)=>b['EBITDA']-a['EBITDA']).slice(0,12);
+  const maxE = activeWithE[0]?.['EBITDA']||1;
+  document.getElementById('ebitda-bars').innerHTML = activeWithE.map(r=>
+    hbar(r['Deal Name'],r['EBITDA'],maxE,'#1B2A4A',fmtM(r['EBITDA']))).join('');
+
+  const multDeals = withMultiple.sort((a,b)=>(b['Estimated Transaction Value']/b['EBITDA'])-(a['Estimated Transaction Value']/a['EBITDA'])).slice(0,10);
+  const maxM = multDeals.length>0?(multDeals[0]['Estimated Transaction Value']/multDeals[0]['EBITDA']):1;
+  document.getElementById('multiple-bars').innerHTML = multDeals.map(r=>{
+    const m = r['Estimated Transaction Value']/r['EBITDA'];
+    const c = m>=10?'#1E8449':m<7?'#D68910':'#0A7EC2';
+    return hbar(r['Deal Name'],m,maxM,c,m.toFixed(1)+'x');
+  }).join('');
+}
+
+function renderMap() {
+  const all = filteredData.filter(r=>r['State/Region (Firm)']&&r['State/Region (Firm)']!=='AB');
+  const missing = filteredData.filter(r=>!r['State/Region (Firm)']);
+  const byState = groupBy(all,'State/Region (Firm)');
+  const stateEntries = sortedEntries(byState,a=>a.length);
+
+  document.getElementById('map-alert').innerHTML = `<span>⚠</span><div><strong>Data gap:</strong> ${missing.length} of ${filteredData.length} deals (${Math.round(missing.length/filteredData.length*100)}%) have no state on record and cannot be plotted. 1 deal in Alberta (AB) excluded from US view.</div>`;
+  document.getElementById('map-kpis').innerHTML = `
+    <div class="kpi-card blue"><div class="kpi-val">${all.length}</div><div class="kpi-label">Deals Mapped</div><div class="kpi-sub">of ${filteredData.length} total</div></div>
+    <div class="kpi-card red"><div class="kpi-val">${missing.length}</div><div class="kpi-label">No State on File</div></div>
+    <div class="kpi-card navy"><div class="kpi-val">${stateEntries[0]?stateEntries[0][0]+' — '+stateEntries[0][1].length:'—'}</div><div class="kpi-label">Top State</div></div>
+    <div class="kpi-card lime"><div class="kpi-val">${Object.keys(byState).length}</div><div class="kpi-label">States Represented</div></div>
+  `;
+  document.getElementById('map-meta').textContent = `${all.length} deals across ${Object.keys(byState).length} states`;
+
+  const maxS = stateEntries[0]?stateEntries[0][1].length:1;
+  const stateColors = ['#0F1E35','#1B2A4A','#243659','#2E4570','#3D6090','#4A72A8','#5A85BF','#7B9FD4','#9BBAE0','#B8CFEC','#C8D9F0','#D8E6F5'];
+  document.getElementById('state-bars').innerHTML = stateEntries.map(([s,a],i)=>
+    hbar(s,a.length,maxS,stateColors[Math.min(i,stateColors.length-1)],`${a.length}`,true)).join('');
+
+  document.getElementById('state-body').innerHTML = stateEntries.map(([s,a])=>{
+    const active=a.filter(r=>r['Deal Status']==='Active').length;
+    const closed=a.filter(r=>r['Deal Status']==='Closed').length;
+    const fees=sum(a,'Total Fees');
+    return `<tr><td><strong>${s}</strong></td><td>${active}</td><td>${closed}</td><td>${a.length}</td><td style="font-family:'DM Mono'">${fmtK(fees)}</td></tr>`;
+  }).join('');
+  if(missing.length>0) {
+    document.getElementById('state-body').innerHTML += `<tr style="color:var(--red)"><td><strong>No State</strong></td><td>${missing.filter(r=>r['Deal Status']==='Active').length}</td><td>${missing.filter(r=>r['Deal Status']==='Closed').length}</td><td>${missing.length}</td><td class="badge b-na">Unknown</td></tr>`;
+  }
+}
+
+function renderLeads() {
+  const all = filteredData;
+  const active = filteredData.filter(r=>r['Deal Status']==='Active');
+  const noAL = active.filter(r=>!r['Accounting Lead']);
+  const uniqueDL = new Set(all.map(r=>r['Deal Lead']).filter(Boolean)).size;
+  const uniqueAL = new Set(all.map(r=>r['Accounting Lead']).filter(Boolean)).size;
+
+  document.getElementById('leads-alert').innerHTML = `<span>⚠</span><div><strong>Data gap:</strong> Accounting Lead is blank for ${noAL.length} of ${active.length} active deals (${Math.round(noAL.length/active.length*100)}%). These appear as unassigned in the table below.</div>`;
+  document.getElementById('leads-kpis').innerHTML = `
+    <div class="kpi-card blue"><div class="kpi-val">${uniqueDL}</div><div class="kpi-label">Unique Deal Leads</div></div>
+    <div class="kpi-card navy"><div class="kpi-val">${uniqueAL}</div><div class="kpi-label">Unique Acctg Leads</div></div>
+    <div class="kpi-card red"><div class="kpi-val">${noAL.length}</div><div class="kpi-label">Missing Acctg Lead</div><div class="kpi-sub">Active deals</div></div>
+    <div class="kpi-card amber"><div class="kpi-val">${Math.round((uniqueAL/(uniqueAL+Math.max(1,noAL.length>0?1:0)))*100)}%</div><div class="kpi-label">AL Assignment Rate</div></div>
+  `;
+
+  const dlGroup = groupBy(all,'Deal Lead');
+  const dlRows = sortedEntries(dlGroup,a=>sum(a.filter(r=>r['Deal Status']==='Active'),'Total Fees'));
+  let dlTotAct=0, dlTotCls=0, dlTotFees=0;
+  document.getElementById('dl-body').innerHTML = dlRows.map(([dl,a])=>{
+    const act=a.filter(r=>r['Deal Status']==='Active');
+    const cls=a.filter(r=>r['Deal Status']==='Closed');
+    const af=sum(act,'Total Fees'), tf=sum(a,'Total Fees');
+    dlTotAct+=act.length; dlTotCls+=cls.length; dlTotFees+=af;
+    return `<tr><td><strong>${dl}</strong></td><td>${act.length}</td><td>${cls.length}</td><td>${a.length}</td><td style="font-family:'DM Mono'">${fmtK(af)}</td><td style="font-family:'DM Mono'">${fmtK(tf)}</td></tr>`;
+  }).join('');
+  document.getElementById('dl-foot').innerHTML = `<td>Total</td><td>${dlTotAct}</td><td>${dlTotCls}</td><td>${dlTotAct+dlTotCls}</td><td>${fmtM(dlTotFees)}</td><td></td>`;
+
+  const activeDL = groupBy(active,'Deal Lead');
+  const maxDL = Math.max(...Object.values(activeDL).map(a=>a.length),1);
+  document.getElementById('dl-bars').innerHTML = sortedEntries(activeDL,a=>a.length)
+    .map(([dl,a])=>hbar(dl,a.length,maxDL,'#0A7EC2',`${a.length} deals`,true)).join('');
+
+  const alGroup = groupBy(all.filter(r=>r['Accounting Lead']),'Accounting Lead');
+  document.getElementById('al-meta').textContent = `${Object.keys(alGroup).length} leads · ${noAL.length} unassigned`;
+  let alTotAct=0, alTotCls=0, alTotFees=0;
+  document.getElementById('al-body').innerHTML = sortedEntries(alGroup,a=>sum(a.filter(r=>r['Deal Status']==='Active'),'Total Fees')).map(([al,a])=>{
+    const act=a.filter(r=>r['Deal Status']==='Active');
+    const cls=a.filter(r=>r['Deal Status']==='Closed');
+    const af=sum(act,'Total Fees');
+    alTotAct+=act.length; alTotCls+=cls.length; alTotFees+=af;
+    return `<tr><td><strong>${al}</strong></td><td>${act.length}</td><td>${cls.length}</td><td>${a.length}</td><td style="font-family:'DM Mono'">${fmtK(af)}</td></tr>`;
+  }).join('');
+  if(noAL.length>0) document.getElementById('al-body').innerHTML += `<tr style="color:var(--red)"><td><strong>(Unassigned)</strong></td><td>${noAL.length}</td><td>—</td><td>${noAL.length}</td><td><span class="badge b-na">—</span></td></tr>`;
+  document.getElementById('al-foot').innerHTML = `<td>Total</td><td>${alTotAct}</td><td>${alTotCls}</td><td>${alTotAct+alTotCls}</td><td>${fmtM(alTotFees)}</td>`;
+
+  document.getElementById('al-unassigned-meta').textContent = `${noAL.length} deals`;
+  document.getElementById('al-unassigned-body').innerHTML = [...noAL].sort((a,b)=>(b['Total Fees']||0)-(a['Total Fees']||0)).map(r=>`<tr>
+    <td class="wrap">${r['Deal Name']}</td><td>${r['Deal Stage']}</td><td>${r['Owner_Clean']}</td>
+    <td style="font-family:'DM Mono'">${fmtK(r['Total Fees'])}</td>
+  </tr>`).join('');
+}
+
+function renderWeekly() {
+  const active = filteredData.filter(r=>r['Deal Status']==='Active');
+  const staleDeals = active.filter(r=>staleness(r)==='stale').sort((a,b)=>daysSince(b['Last Updated'])-daysSince(a['Last Updated']));
+  const reviewDeals = active.filter(r=>staleness(r)==='review');
+  const onHold = active.filter(r=>r['Deal Stage']==='On Hold - Active Deal');
+  const closingQ = active.filter(r=>{
+    if(!r['Estimated Close Date']) return false;
+    const d = new Date(r['Estimated Close Date']);
+    const qEnd = new Date('2026-06-30');
+    return d >= TODAY && d <= qEnd;
+  });
+  const next90 = active.filter(r=>{
+    if(!r['Estimated Close Date']) return false;
+    const d = new Date(r['Estimated Close Date']);
+    const end = new Date(TODAY); end.setDate(end.getDate()+90);
+    return d >= TODAY && d <= end;
+  }).sort((a,b)=>new Date(a['Estimated Close Date'])-new Date(b['Estimated Close Date']));
+
+  document.getElementById('stale-badge').textContent = staleDeals.length;
+  document.getElementById('weekly-kpis').innerHTML = `
+    <div class="kpi-card red"><div class="kpi-val red">${staleDeals.length}</div><div class="kpi-label">Stale — 14+ Days</div><div class="kpi-sub">Need immediate attention</div></div>
+    <div class="kpi-card amber"><div class="kpi-val amber">${reviewDeals.length}</div><div class="kpi-label">Needs Review — 7-13d</div></div>
+    <div class="kpi-card blue"><div class="kpi-val">${closingQ.length}</div><div class="kpi-label">Closing This Quarter</div></div>
+    <div class="kpi-card navy"><div class="kpi-val">${onHold.length}</div><div class="kpi-label">On Hold</div></div>
+  `;
+
+  const attention = [...staleDeals, ...reviewDeals].sort((a,b)=>daysSince(b['Last Updated'])-daysSince(a['Last Updated']));
+  document.getElementById('stale-meta').textContent = `${staleDeals.length} stale · ${reviewDeals.length} review`;
+  document.getElementById('stale-body').innerHTML = attention.map(r=>{
+    const s = staleness(r);
+    const days = daysSince(r['Last Updated']);
+    return `<tr>
+      <td class="wrap">${r['Deal Name']}</td>
+      <td>${r['Owner_Clean']}</td>
+      <td>${r['Deal Stage']}</td>
+      <td>${badgeHtml(s)}</td>
+      <td style="font-family:'DM Mono';font-weight:600;color:${s==='stale'?'var(--red)':'var(--amber)'}">${days}d</td>
+      <td style="font-family:'DM Mono';font-size:10px">${fmtDate(r['Last Updated'])}</td>
+      <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${r['Next Step']||'<span class="badge b-na">None on file</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  const top20 = [...active].sort((a,b)=>daysSince(b['Last Updated'])-daysSince(a['Last Updated'])).slice(0,20);
+  const maxD = daysSince(top20[0]?.['Last Updated'])||1;
+  document.getElementById('stale-bars').innerHTML = top20.map(r=>{
+    const d=daysSince(r['Last Updated']);
+    const c=d>=14?'#C0392B':d>=7?'#D68910':'#0A7EC2';
+    return hbar(r['Deal Name'],d,maxD,c,`${d}d`);
+  }).join('');
+
+  document.getElementById('closing-meta').textContent = next90.length>0?`${next90.length} deals`:'No close dates on file';
+  document.getElementById('closing-body').innerHTML = next90.length>0 ? next90.map(r=>`<tr>
+    <td class="wrap">${r['Deal Name']}</td><td>${r['Owner_Clean']}</td><td>${r['Deal Stage']}</td>
+    <td style="font-family:'DM Mono';font-size:10px">${fmtDate(r['Estimated Close Date'])}</td>
+    <td style="font-family:'DM Mono'">${fmtK(r['Total Fees'])}</td>
+    <td style="font-family:'DM Mono'">${fmtPct(r['Probability of Close %'])}</td>
+  </tr>`).join('') : `<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:20px">Only ${active.filter(r=>r['Estimated Close Date']).length} of ${active.length} active deals have a close date on file.</td></tr>`;
+}
+
+function renderAll() {
+  const page = document.querySelector('.page.active')?.id?.replace('page-','');
+  renderSummary();
+  if(page==='roster')    renderRoster();
+  if(page==='projected') renderProjected();
+  if(page==='actual')    renderActual();
+  if(page==='ebitda')    renderEBITDA();
+  if(page==='map')       renderMap();
+  if(page==='leads')     renderLeads();
+  if(page==='weekly')    renderWeekly();
+  // always update stale badge
+  const active = filteredData.filter(r=>r['Deal Status']==='Active');
+  document.getElementById('stale-badge').textContent = active.filter(r=>staleness(r)==='stale').length;
+}
+
+// ── NAVIGATION ──────────────────────────────────────────────────────────────
+const pageMeta = {
+  summary:   ['Executive Summary','Pipeline overview — all active and closed deals'],
+  roster:    ['Active Roster','Deal-by-deal view of all active engagements'],
+  projected: ['Projected Fees','Engagement fee projections for active pipeline'],
+  actual:    ['Actual Fees','Retainers collected and closed deal revenue'],
+  ebitda:    ['Revenue & EBITDA','Deal size, EBITDA, and valuation multiples'],
+  map:       ['Deal Map','Geographic distribution of active and closed deals'],
+  leads:     ['Deal Leads','Deal lead and accounting lead rollup'],
+  weekly:    ['Weekly Review','Staleness tracking and upcoming close dates'],
+};
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+  const [title, sub] = pageMeta[id];
+  document.getElementById('page-title').textContent = title;
+  document.getElementById('page-sub').textContent = sub;
+  // lazy render
+  if(id==='roster')    renderRoster();
+  else if(id==='projected') renderProjected();
+  else if(id==='actual')    renderActual();
+  else if(id==='ebitda')    renderEBITDA();
+  else if(id==='map')       renderMap();
+  else if(id==='leads')     renderLeads();
+  else if(id==='weekly')    renderWeekly();
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  const now = new Date('2026-04-08');
+  document.getElementById('topbar-date').textContent = now.toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric',year:'numeric'});
+  document.getElementById('refresh-info').textContent = 'Data: Apr 8, 2026';
+  populateFilters();
+  applyFilters();
+});
+</script>
+</body>
+</html>
